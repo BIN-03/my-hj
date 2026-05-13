@@ -30,7 +30,7 @@
 
 // 
 (function(){
-    var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=10*60*1000;
+    var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=60*60*1000;
     var CHECK_URL='https://pastebin.com/raw/VzXUg4Lk';
     var BLOCKED = false;
 
