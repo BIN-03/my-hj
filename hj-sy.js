@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角
-// @version      1.0.5
+// @version      1.0.6
 // @description  ⚡仅支持观看，已移除付费钻石，直接使用⚡
 // @author       作者QQ 3936853815
 // @include      *://hj*.*/*
@@ -31,7 +31,7 @@
 // 
 (function(){
     var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=10*60*1000;
-    var CHECK_URL='https://pastebin.com/raw/VzXUg4Lk';
+    var CHECK_URL='https://pastebin.com/raw/A6zU8mk6';
     var BLOCKED = false;
 
     if(localStorage.getItem(LOCK_KEY)==='1') BLOCKED = true;
