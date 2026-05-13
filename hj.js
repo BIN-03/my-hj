@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁
-// @version      1.0.8
+// @version      1.0.9
 // @description  ⚡作者QQ 3936853815。观看及下载视频，已移除付费钻石，直接使用。⚡
 // @author      3936853815
 // @include      *://hj*.*/*
