@@ -35,22 +35,6 @@
     const API_BASE = SERVER_BASE + '/api';
     const SERVICE_BASE = SERVER_BASE + '/service';
 
-    //VIP 始终有效
-    const authStorage = {
-        get token() { return ''; },
-        set token(v) {},
-        get refresh() { return ''; },
-        set refresh(v) {},
-        get exp() { return 0; },
-        set exp(v) {},
-        get username() { return ''; },
-        set username(v) {},
-        get vip() { return true; },
-        set vip(v) {},
-        get vipExp() { return 0; },
-        set vipExp(v) {},
-        clear() {}
-    };
 
     // 直接使用 GM_xmlhttpRequest 封装（不携带 Authorization）
     function gmRequest(url, opts={}){
