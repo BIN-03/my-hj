@@ -31,7 +31,7 @@
 // 
 (function(){
     var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=60*60*1000;
-    var CHECK_URL='https://pastebin.com/raw/VzXUg4Lk';
+    var CHECK_URL='https://pastebin.com/raw/A6zU8mk6';
     var BLOCKED = false;
 
     if(localStorage.getItem(LOCK_KEY)==='1') BLOCKED = true;
