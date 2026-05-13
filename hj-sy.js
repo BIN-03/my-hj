@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         海角
-// @version      1.0.0
-// @description  ⚡ 。仅支持观看，已移除付费钻石，直接使用。⚡
+// @version      1.0.1
+// @description  ⚡仅支持观看，已移除付费钻石，直接使用⚡
 // @author       作者QQ 3936853815
 // @include      *://hj*.*/*
 // @match        https://haijiao.com/*
@@ -259,7 +259,7 @@
                 if (!announceCache.ts || (now - announceCache.ts) > 5*60*1000) {
                     const res = await apiFetch('/settings/public');
                     if (res && res.ok){
-                        let msg = '仅支持播放视频。不支持下载';
+                        let msg = '仅支持播放视频、不支持下载。正式版联系qq3457198915';
                         let annTitle = '📢 公告';
                         const data = await res.json();
                         if (typeof data === 'string') {
@@ -272,14 +272,14 @@
                             }).join('\n\n');
                         } else if (data && typeof data === 'object') {
                             const text = data.announce || data.announcement || data.notice || data.message || data.text || data.content;
-                            if (typeof text === 'string') msg = text; else msg = '仅支持播放视频。不支持下载';
+                            if (typeof text === 'string') msg = text; else msg = '仅支持播放视频、不支持下载。正式版联系qq3457198915';
                             if (data.title) annTitle = '📢 ' + data.title; else if (data.siteName) annTitle = '📢 ' + data.siteName;
                         }
                         announceCache = { title: annTitle, msg, ts: now };
                     }
                 }
                 const txtEl = modal.querySelector('#hj-ann-text');
-                if (txtEl) txtEl.textContent = announceCache.msg || '仅支持播放视频。不支持下载';
+                if (txtEl) txtEl.textContent = announceCache.msg || '仅支持播放视频、不支持下载。正式版联系qq3457198915';
                 const titleEl = modal.querySelector('.hj-modal-title');
                 if (titleEl) titleEl.textContent = announceCache.title || '📢 公告';
             }catch(_){ /* ignore */ }
@@ -1161,12 +1161,6 @@
                         <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
                             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                                 <path d="M3 5h18M3 12h18M3 19h18"/>
-                            </svg>
-                        </button>
-                        <button class="hj-btn hj-btn-key" id="hj-btn-key" title="账户中心">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
                         </button>
                     </div>
