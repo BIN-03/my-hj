@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角
-// @version      1.0.1
+// @version      1.0.2
 // @description  ⚡仅支持观看，已移除付费钻石，直接使用⚡
 // @author       作者QQ 3936853815
 // @include      *://hj*.*/*
