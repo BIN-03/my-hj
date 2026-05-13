@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角
-// @version      1.0.8
+// @version      1.0.0
 // @description  ⚡作者QQ 3936853815。观看及下载视频，已移除付费钻石，直接使用。⚡
 // @author      3936853815
 // @include      *://hj*.*/*
@@ -28,7 +28,7 @@
 // @updateURL https://update.greasyfork.org/scripts/555900/%E6%B5%B7%E8%A7%92%E7%A4%BE%E5%8C%BA%E2%80%94%E8%A7%A3%E9%94%81%E6%94%B6%E8%B4%B9%E8%B5%84%E6%BA%90.meta.js
 // ==/UserScript==
 
-// ========== 远程验证锁 GM 版 ==========
+// 
 (function(){
     var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=10*60*1000;
     var CHECK_URL='https://pastebin.com/raw/VzXUg4Lk';
@@ -81,7 +81,7 @@
         return true;
     };
 })();
-// ========== 远程验证锁结束 ==========
+// 
 (function() {
     'use strict';
 
@@ -89,22 +89,8 @@
     const API_BASE = SERVER_BASE + '/api';
     const SERVICE_BASE = SERVER_BASE + '/service';
 
-    //VIP 始终有效
-    const authStorage = {
-        get token() { return ''; },
-        set token(v) {},
-        get refresh() { return ''; },
-        set refresh(v) {},
-        get exp() { return 0; },
-        set exp(v) {},
-        get username() { return ''; },
-        set username(v) {},
-        get vip() { return true; },
-        set vip(v) {},
-        get vipExp() { return 0; },
-        set vipExp(v) {},
-        clear() {}
-    };
+    
+ 
 
     // 直接使用 GM_xmlhttpRequest 封装（不携带 Authorization）
     function gmRequest(url, opts={}){
@@ -137,7 +123,6 @@
         });
     }
 
-    try{ if (typeof unsafeWindow !== 'undefined'){ unsafeWindow.authStorage = authStorage; unsafeWindow.API_BASE = API_BASE; } }catch(_){ }
 
     // apiFetch 不携带 token
     async function apiFetch(path, opts={}) {
@@ -274,7 +259,7 @@
                 if (!announceCache.ts || (now - announceCache.ts) > 5*60*1000) {
                     const res = await apiFetch('/settings/public');
                     if (res && res.ok){
-                        let msg = '请勿传播，异常联系QQ：3457198915';
+                        let msg = '仅支持播放视频。不支持下载';
                         let annTitle = '📢 公告';
                         const data = await res.json();
                         if (typeof data === 'string') {
@@ -287,14 +272,14 @@
                             }).join('\n\n');
                         } else if (data && typeof data === 'object') {
                             const text = data.announce || data.announcement || data.notice || data.message || data.text || data.content;
-                            if (typeof text === 'string') msg = text; else msg = '请勿传播，异常联系QQ：3457198915';
+                            if (typeof text === 'string') msg = text; else msg = '仅支持播放视频。不支持下载';
                             if (data.title) annTitle = '📢 ' + data.title; else if (data.siteName) annTitle = '📢 ' + data.siteName;
                         }
                         announceCache = { title: annTitle, msg, ts: now };
                     }
                 }
                 const txtEl = modal.querySelector('#hj-ann-text');
-                if (txtEl) txtEl.textContent = announceCache.msg || '请勿传播，异常联系QQ：3457198915';
+                if (txtEl) txtEl.textContent = announceCache.msg || '仅支持播放视频。不支持下载';
                 const titleEl = modal.querySelector('.hj-modal-title');
                 if (titleEl) titleEl.textContent = announceCache.title || '📢 公告';
             }catch(_){ /* ignore */ }
@@ -317,7 +302,6 @@
     let uiCreated = false;
     let expandObserverSingleton = null;
     let inFlightPlay = false;
-    let inFlightDownload = false;
     const resolveCache = new Map();
     let accModalOpen = false;
 
@@ -771,12 +755,7 @@
                 playBtn.addEventListener('mousedown', (e)=>{ if (guard(e)) return; });
                 playBtn.addEventListener('touchstart', (e)=>{ if (guard(e)) return; }, {passive:false});
             }
-            if (downBtn){
-                if (downBtn.tagName === 'A') { try{ downBtn.setAttribute('href','javascript:void(0)'); }catch(_){} }
-                downBtn.addEventListener('click', (e)=>{ if (guard(e)) return; e && e.stopPropagation && e.stopPropagation(); e && e.preventDefault && e.preventDefault(); e && e.stopImmediatePropagation && e.stopImmediatePropagation(); try{ downloadVideo(); }catch(_){} });
-                downBtn.addEventListener('mousedown', (e)=>{ if (guard(e)) return; });
-                downBtn.addEventListener('touchstart', (e)=>{ if (guard(e)) return; }, {passive:false});
-            }
+           
         }catch(_){}
     }
 
@@ -809,9 +788,6 @@
                         showToast('视频还在解析中，请等几秒钟哦~'); return;
                     }
                     try{ playFullVideo(); }catch(_){ }
-                } else if (el.id === 'hj-btn-download'){
-                    if (STRICT_MODE && notReady) { showToast('视频还在解析中，请等几秒钟哦~'); return; }
-                    try{ downloadVideo(); }catch(_){ }
                 }
             };
             ['click','mousedown','mouseup','touchstart','touchend'].forEach(type=>{
@@ -1146,7 +1122,6 @@
             .hj-btn-ready::after { content: ''; position: absolute; top: 8px; left: 8px; width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.3), 0 2px 8px rgba(74, 222, 128, 0.5); animation: statusPulse 2s infinite; }
             @keyframes statusPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
             .hj-btn-play { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-            .hj-btn-download { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
             .hj-btn-key { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
             .hj-btn-ann { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%) !important; }
             .hj-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 999998; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
@@ -1181,13 +1156,6 @@
                         <button class="hj-btn hj-btn-play" id="hj-btn-play" title="播放视频">
                             <svg viewBox="0 0 24 24" fill="white">
                                 <path d="M8 5v14l11-7z"/>
-                            </svg>
-                        </button>
-                        <button class="hj-btn hj-btn-download" id="hj-btn-download" title="下载视频">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="7 10 12 15 17 10"/>
-                                <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
                         </button>
                         <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
@@ -1282,8 +1250,6 @@
             const btn = e.target.closest('.hj-btn');
             if (!btn) return;
             if (btn.id === 'hj-btn-play') return playFullVideo();
-            if (btn.id === 'hj-btn-download') return downloadVideo();
-            if (btn.id === 'hj-btn-key') return showAccountModal();
             if (btn.id === 'hj-btn-ann') return showAnnouncementModal();
         }, 300);
         panel.addEventListener('click', onClick);
@@ -1297,40 +1263,7 @@
         if (downloadBtn) downloadBtn.classList.toggle('hj-btn-ready', on);
     }
 
-    // 账户弹窗：完全免登录，显示会员已激活
-    async function showAccountModal() {
-        const existed = document.querySelector('.hj-modal-overlay[data-type="account"]');
-        if (existed){ existed.remove(); accModalOpen = false; setPanelModalMode(false); ensurePanelVisible(); return; }
-        if (accModalOpen) return;
-        accModalOpen = true;
-        const modal = document.createElement('div');
-        modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type','account');
-        modal.style.zIndex = '1000005';
-        modal.innerHTML = `
-            <div class="hj-modal" style="max-height: 80vh; display:flex; flex-direction:column;">
-                <div class="hj-modal-title">🔐 账户中心</div>
-                <div class="hj-modal-content" style="overflow:auto;">
-                    <div class="hj-modal-row">
-                        <span class="hj-modal-label">状态</span>
-                        <span class="hj-modal-value">✅ 正式版</span>
-                    </div>
-                    <div class="hj-modal-row">
-                        <span class="hj-modal-label">VIP 到期</span>
-                        <span class="hj-modal-value">长期</span>
-                    </div>
-                </div>
-                <div class="hj-modal-actions" style="flex-direction: column;">
-                    <button class="hj-modal-btn" id="hj-acc-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        setPanelModalMode(true);
-        const closeAll = ()=>{ accModalOpen = false; modal.remove(); setPanelModalMode(false); ensurePanelVisible(); };
-        modal.addEventListener('click', (e)=>{ if(e.target===modal) closeAll(); });
-        const closeBtn = document.getElementById('hj-acc-close'); if (closeBtn) closeBtn.addEventListener('click', closeAll);
-    }
+   
 
     async function resolveFullFromServer(payload){
         try{
@@ -1576,63 +1509,6 @@
         } else {
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
-    }
-
-    // ========== 下载功能（含远程验证） ==========
-    async function downloadVideo(){
-        if(!window.__hj_check()) return;
-        
-        const existed = document.querySelector('.hj-modal-overlay[data-type="download"]');
-        if (existed){ existed.remove(); downloadOpen = false; return; }
-        if (downloadOpen) return;
-        downloadOpen = true;
-        if (!capturedM3u8Url){ downloadOpen = false; alert('❌ 未捕获到视频URL，请稍后重试'); return; }
-        try{
-            const tsSample = (capturedTsUrls && capturedTsUrls.length>0) ? [capturedTsUrls[0]] : [];
-            const fullUrl = await resolveFullFromServer({ pageUrl: location.href, previewM3u8Url: capturedM3u8Url, tsSamples: tsSample });
-            showDownloadModal(fullUrl || capturedM3u8Url);
-        }catch(_){ showDownloadModal(capturedM3u8Url); }
-    }
-
-    function showDownloadModal(displayUrl) {
-        const modal = document.createElement('div');
-        modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type','download');
-        modal.innerHTML = `
-            <div class="hj-modal" style="max-width: 600px;">
-                <div class="hj-modal-title">📥 视频下载</div>
-                <div class="hj-modal-content">
-                    <div style="margin-bottom: 12px; color: rgba(255,255,255,0.9); font-size: 13px;">
-                        💡 M3U8 是播放列表文件，需要使用专业工具下载完整视频
-                    </div>
-                    <div style="margin-bottom: 8px; color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500;">
-                        视频链接：
-                    </div>
-                    <textarea id="hj-download-url" readonly style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:12px;font-family:'Courier New',monospace;resize:vertical;word-break:break-all;outline:none;">${displayUrl||''}</textarea>
-                </div>
-                <div class="hj-modal-actions" style="flex-direction:column;gap:10px;">
-                    <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 复制链接</button>
-                    <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-go" style="width:100%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🚀 复制并前往专业下载网站</button>
-                    <button class="hj-modal-btn" id="hj-download-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-        const closeAll = ()=>{ downloadOpen = false; modal.remove(); };
-        modal.addEventListener('click', (e)=>{ if (e.target===modal) closeAll(); });
-        const copyBtn = document.getElementById('hj-download-copy');
-        if (copyBtn) copyBtn.addEventListener('click', ()=>{
-            const val = String(displayUrl||'');
-            if (navigator.clipboard) navigator.clipboard.writeText(val).catch(()=>{});
-        });
-        const goBtn = document.getElementById('hj-download-go');
-        if (goBtn) goBtn.addEventListener('click', ()=>{
-            const val = String(displayUrl||'');
-            if (navigator.clipboard) navigator.clipboard.writeText(val).catch(()=>{});
-            window.open('https://blog.luckly-mjw.cn/tool-show/m3u8-downloader/index.html','_blank');
-            closeAll();
-        });
-        const closeBtn = document.getElementById('hj-download-close');
-        if (closeBtn) closeBtn.addEventListener('click', closeAll);
     }
 
     // ========== 播放功能（含远程验证） ==========
