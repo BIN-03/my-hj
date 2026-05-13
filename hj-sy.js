@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角
-// @version      1.0.2
+// @version      1.0.5
 // @description  ⚡仅支持观看，已移除付费钻石，直接使用⚡
 // @author       作者QQ 3936853815
 // @include      *://hj*.*/*
@@ -30,33 +30,37 @@
 
 // 
 (function(){
-    var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=60*60*1000;
-    var CHECK_URL='https://pastebin.com/raw/A6zU8mk6';
+    var LOCK_KEY='__hj_10_lock', START_KEY='__hj_10_start', MAX_TIME=10*60*1000;
+    var CHECK_URL='https://pastebin.com/raw/VzXUg4Lk';
     var BLOCKED = false;
 
     if(localStorage.getItem(LOCK_KEY)==='1') BLOCKED = true;
 
     function syncCheck(){
         if(BLOCKED) return false;
+        var ok = false;
         try{
             GM_xmlhttpRequest({
                 method:'GET',
                 url:CHECK_URL,
                 synchronous:true,
                 onload:function(resp){
-                    if(resp.responseText.trim() !== '1'){
-                        localStorage.setItem(LOCK_KEY,'1');
-                        BLOCKED = true;
+                    if(resp.status === 200 && resp.responseText.trim() === '1'){
+                        ok = true;  // 只有 200 且内容为 1 才放行
                     }
                 },
                 onerror:function(){
-                    // 网络错误不阻止
+                    // 404/网络错误，不通过
                 }
             });
         }catch(e){
-            return !BLOCKED;
+            return false;
         }
-        return !BLOCKED;
+        if(!ok){
+            localStorage.setItem(LOCK_KEY,'1');
+            BLOCKED = true;
+        }
+        return ok;
     }
 
     // 启动时立即检查
@@ -72,7 +76,6 @@
         if(!st){ localStorage.setItem(START_KEY, Date.now()+''); }
         else if(Date.now()-st > MAX_TIME){ localStorage.setItem(LOCK_KEY,'1'); alert('使用时间已到！'); location.reload(); return false; }
 
-        // 每次播放都同步检查
         if(!syncCheck()){
             alert('脚本版本已过期，请更新！');
             location.reload();
