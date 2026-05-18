@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁
-// @version      1.0.9
+// @version      1.0.11
 // @description  ⚡作者QQ 3936853815。观看及下载视频，已移除付费钻石，直接使用。⚡
 // @author      3936853815
 // @include      *://hj*.*/*
@@ -20,9 +20,6 @@
 // @grant        GM_setValue
 // @grant        GM_info
 // @license      MIT
-// @namespace https://greasyfork.org/users/1398711
-// @connect      5kk.lol
-// @connect      *.5kk.lol
 // @grant        GM_xmlhttpRequest
 // @downloadURL https://update.greasyfork.org/scripts/555900/%E6%B5%B7%E8%A7%92%E7%A4%BE%E5%8C%BA%E2%80%94%E8%A7%A3%E9%94%81%E6%94%B6%E8%B4%B9%E8%B5%84%E6%BA%90.user.js
 // @updateURL https://update.greasyfork.org/scripts/555900/%E6%B5%B7%E8%A7%92%E7%A4%BE%E5%8C%BA%E2%80%94%E8%A7%A3%E9%94%81%E6%94%B6%E8%B4%B9%E8%B5%84%E6%BA%90.meta.js
@@ -30,12 +27,6 @@
 
 (function() {
     'use strict';
-
-    const SERVER_BASE = 'https://5kk.lol';
-    const API_BASE = SERVER_BASE + '/api';
-    const SERVICE_BASE = SERVER_BASE + '/service';
-
-
     // 直接使用 GM_xmlhttpRequest 封装（不携带 Authorization）
     function gmRequest(url, opts={}){
         const method = (opts.method||'GET').toUpperCase();
@@ -204,7 +195,7 @@
                 if (!announceCache.ts || (now - announceCache.ts) > 5*60*1000) {
                     const res = await apiFetch('/settings/public');
                     if (res && res.ok){
-                        let msg = '请勿传播，异常联系QQ：3457198915';
+                        let msg = '请勿传播，q群：703860120';
                         let annTitle = '📢 公告';
                         const data = await res.json();
                         if (typeof data === 'string') {
@@ -217,14 +208,14 @@
                             }).join('\n\n');
                         } else if (data && typeof data === 'object') {
                             const text = data.announce || data.announcement || data.notice || data.message || data.text || data.content;
-                            if (typeof text === 'string') msg = text; else msg = '请勿传播，异常联系QQ：3457198915';
+                            if (typeof text === 'string') msg = text; else msg = '请勿传播，q群：703860120';
                             if (data.title) annTitle = '📢 ' + data.title; else if (data.siteName) annTitle = '📢 ' + data.siteName;
                         }
                         announceCache = { title: annTitle, msg, ts: now };
                     }
                 }
                 const txtEl = modal.querySelector('#hj-ann-text');
-                if (txtEl) txtEl.textContent = announceCache.msg || '请勿传播，异常联系QQ：3457198915';
+                if (txtEl) txtEl.textContent = announceCache.msg || '请勿传播，q群：703860120';
                 const titleEl = modal.querySelector('.hj-modal-title');
                 if (titleEl) titleEl.textContent = announceCache.title || '📢 公告';
             }catch(_){ /* ignore */ }
