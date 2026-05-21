@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.21
+// @version      1.0.22
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @include      *://hj*.*/*
@@ -107,7 +107,7 @@ function showUpdateNotification(newVersion) {
     `;
     notification.innerHTML = `
         <span style="font-size: 18px;">🎉</span>
-        <span>发现新版本 v${newVersion}</span>
+        <span>发现新版本 v${newVersion}（当前 v${SCRIPT_VERSION}）</span>
         <button id="hj-update-now-btn" style="
             background: rgba(255,255,255,0.25);
             border: none;
@@ -128,8 +128,14 @@ function showUpdateNotification(newVersion) {
         ">✕</button>
     `;
     document.body.appendChild(notification);
+
     document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
+        // 更新地址
         window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
+        setTimeout(() => {
+            alert('✅ 脚本更新页面已打开！\n1. 请完成油猴安装\n2. 安装后关闭此标签页\n3. 刷新原页面即可生效');
+        }, 300);
+        notification.remove();
     });
     document.getElementById('hj-update-dismiss-btn')?.addEventListener('click', () => {
         notification.remove();
@@ -162,7 +168,7 @@ function checkLocalVersionUpdate() {
     GM_deleteValue('last_run_version');
     const lastVersion = GM_getValue('last_run_version', '');
     if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}请重新打开浏览器`), 3000);
+        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}，请刷新页面生效`), 3000);
     }
     GM_setValue('last_run_version', SCRIPT_VERSION);
 }
