@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         海角—解锁
-// @version      1.0.11
-// @description  ⚡作者QQ 3936853815。观看及下载视频，已移除付费钻石，直接使用。⚡
-// @author      3936853815
+// @name         海角—解锁金币/钻石
+// @version      1.0.8
+// @description  ⚡作者QQ 703860120。观看及下载视频，已移除付费钻石，直接使用。⚡
+// @author      703860120
 // @include      *://hj*.*/*
 // @match        https://haijiao.com/*
 // @match        https://*.haijiao.com/*
@@ -165,63 +165,79 @@
     function setPanelModalMode(on){ try{ const p = getFloatingPanel(); if (!p) return; p.style.zIndex = on ? '9999' : '999999'; if(!on){ p.style.display='block'; } }catch(e){ console.error(e); } }
 
     // 公告模态框
-    function showAnnouncementModal(){
-        const existed = document.querySelector('.hj-modal-overlay[data-type="announce"]');
-        if (existed){ existed.remove(); announceOpen = false; setPanelModalMode(false); ensurePanelVisible(); return; }
-        if (announceOpen) return;
-        const modal = document.createElement('div');
-        modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type','announce');
-        modal.style.zIndex = '1000005';
-        const initTitle = escapeHtml(announceCache.title || '📢 公告');
-        const initMsg = escapeHtml(announceCache.msg || '正在加载公告...');
-        modal.innerHTML = `
-            <div class="hj-modal" style="max-width: 600px; max-height: 80vh; display:flex; flex-direction:column;">
-                <div class="hj-modal-title">${initTitle}</div>
-                <div class="hj-modal-content" style="flex:1; overflow:auto; padding:8px 6px;">
-                    <div id="hj-ann-text" style="white-space:pre-wrap;word-break:break-word; font-size:14px; line-height:1.6; color:rgba(255,255,255,0.95);">${initMsg}</div>
-                </div>
-                <div class="hj-modal-actions"><button class="hj-modal-btn" id="hj-ann-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button></div>
-            </div>`;
-        document.body.appendChild(modal);
-        announceOpen = true;
-        setPanelModalMode(true);
-        const closeAll = ()=>{ announceOpen = false; modal.remove(); setPanelModalMode(false); ensurePanelVisible(); };
-        modal.addEventListener('click', (e)=>{ if(e.target===modal) closeAll(); });
-        const closeBtn = document.getElementById('hj-ann-close'); if (closeBtn) closeBtn.addEventListener('click', closeAll);
-        (async ()=>{
-            try{
-                const now = Date.now();
-                if (!announceCache.ts || (now - announceCache.ts) > 5*60*1000) {
-                    const res = await apiFetch('/settings/public');
-                    if (res && res.ok){
-                        let msg = '请勿传播，q群：703860120';
-                        let annTitle = '📢 公告';
-                        const data = await res.json();
-                        if (typeof data === 'string') {
-                            msg = data;
-                        } else if (Array.isArray(data)) {
-                            msg = data.map(it => {
-                                const t = (it && (it.title||'')) ? (it.title + '\n') : '';
-                                const c = (it && (it.content||it.notice||it.announcement||it.message||it.text||'')) || '';
-                                return t + c;
-                            }).join('\n\n');
-                        } else if (data && typeof data === 'object') {
-                            const text = data.announce || data.announcement || data.notice || data.message || data.text || data.content;
-                            if (typeof text === 'string') msg = text; else msg = '请勿传播，q群：703860120';
-                            if (data.title) annTitle = '📢 ' + data.title; else if (data.siteName) annTitle = '📢 ' + data.siteName;
-                        }
-                        announceCache = { title: annTitle, msg, ts: now };
-                    }
-                }
-                const txtEl = modal.querySelector('#hj-ann-text');
-                if (txtEl) txtEl.textContent = announceCache.msg || '请勿传播，q群：703860120';
-                const titleEl = modal.querySelector('.hj-modal-title');
-                if (titleEl) titleEl.textContent = announceCache.title || '📢 公告';
-            }catch(_){ /* ignore */ }
-        })();
+  function showAnnouncementModal() {
+    const existed = document.querySelector('.hj-modal-overlay[data-type="announce"]');
+    if (existed) {
+        existed.remove(); announceOpen = false; setPanelModalMode(false); ensurePanelVisible(); return;
     }
+    if (announceOpen) return;
 
+    const modal = document.createElement('div');
+    modal.className = 'hj-modal-overlay';
+    modal.setAttribute('data-type', 'announce');
+    modal.style.zIndex = '1000005';
+
+    modal.innerHTML = `
+    <div class="hj-modal" style="max-width: 600px; max-height: 80vh; display:flex; flex-direction:column;">
+        <div class="hj-modal-title">📢 公告</div>
+        <div class="hj-modal-content" style="flex:1; overflow:auto; padding:8px 6px;">
+            <div id="hj-ann-text" style="white-space:pre-wrap;word-break:break-word; font-size:14px; line-height:1.6; color:rgba(255,255,255,0.95);">正在加载...</div>
+        </div>
+        <div class="hj-modal-actions" style="display: flex; gap: 12px; justify-content: center;">
+            <button class="hj-modal-btn" id="hj-ann-close" style="flex:1; background: rgba(255,255,255,0.2);">关闭</button>
+            <button class="hj-modal-btn" id="hj-qq-group-btn" style="flex:1; background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%);">🐧 前往防失联</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modal);
+    announceOpen = true;
+    setPanelModalMode(true);
+
+    const closeAll = () => {
+        announceOpen = false; modal.remove(); setPanelModalMode(false); ensurePanelVisible();
+    };
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeAll();
+    });
+
+    document.getElementById('hj-ann-close')?.addEventListener('click', closeAll);
+    document.getElementById('hj-qq-group-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.open('https://qm.qq.com/cgi-bin/qm/qr?k=BBh2_32dpkw0DDb3PJRnP1J-pPW96Lhv&jump_from=webapi&authKey=n0jSy+OWeCJWtRl8kE05d6hGoZzRropB0QpoInmoALz1WIpg+0L22Uu48OD9KbPM', '_blank');
+    });
+
+    // 获取公告内容
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: 'https://gist.githubusercontent.com/BIN-03/ff5cd09874cba6c1a8a352bf27b6067f/raw/Official_announcement.txt?_=' + Date.now(),
+        timeout: 8000,
+        onload: function(response) {
+            console.log('公告请求状态:', response.status);
+            if (response.status === 200) {
+                console.log('原始返回:', response.responseText);
+                try {
+                    const data = JSON.parse(response.responseText);
+                    console.log('解析后的content:', data.content);
+                    const contentEl = document.getElementById('hj-ann-text');
+                    if (contentEl) {
+                        contentEl.textContent = data.content || '暂无公告内容';
+                        console.log('已设置公告内容');
+                    }
+                } catch (e) {
+                    console.error('解析错误:', e);
+                    document.getElementById('hj-ann-text').textContent = '公告格式错误';
+                }
+            } else {
+                document.getElementById('hj-ann-text').textContent = '公告加载失败';
+            }
+        },
+        onerror: function(err) {
+            console.error('请求失败:', err);
+            document.getElementById('hj-ann-text').textContent = '网络错误';
+        }
+    });
+}
     async function serviceFetch(path, opts={}) {
         const headers = Object.assign({}, opts.headers || {});
         const method = (opts.method||'GET').toUpperCase();
