@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.8
-// @description  ⚡作者QQ 703860120。观看及下载视频，已移除付费钻石，直接使用。⚡
+// @version      1.0.9
+// @description  ⚡作者QQ 703860120。观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      703860120
 // @include      *://hj*.*/*
 // @match        https://haijiao.com/*
@@ -27,7 +27,8 @@
 
 (function() {
     'use strict';
-    // 直接使用 GM_xmlhttpRequest 封装（不携带 Authorization）
+
+    // 使用 GM_xmlhttpRequest 封装
     function gmRequest(url, opts={}){
         const method = (opts.method||'GET').toUpperCase();
         const headers = Object.assign({}, opts.headers||{});
@@ -794,47 +795,6 @@
         return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
     }
 
-    function isExpandButton(element) {
-        if (!element || !element.tagName) return false;
-        const text = element.textContent || element.innerText || '';
-        const className = element.className || '';
-        const id = element.id || '';
-        const expandTexts = [
-            '展开', '显示更多', '查看更多', '阅读更多', '点击展开', '展开全文', '全文',
-            'more', 'expand', 'show more', 'read more', 'show all'
-        ];
-        const hasExpandText = expandTexts.some(expandText =>
-            text.toLowerCase().includes(expandText.toLowerCase())
-        );
-        const expandClassIds = [
-            'expand', 'more', 'show-more', 'read-more', 'unfold',
-            'sell-btn', '展开', 'btn-more', 'btn-expand'
-        ];
-        const hasExpandClass = expandClassIds.some(expandClass =>
-            className.toLowerCase().includes(expandClass.toLowerCase()) ||
-            id.toLowerCase().includes(expandClass.toLowerCase())
-        );
-        const expandSelectors = [
-            '[class*="expand"]',
-            '[class*="more"]',
-            '[class*="unfold"]',
-            '[class*="sell-btn"]',
-            '.show-more',
-            '.read-more',
-            '.expand-all',
-            '.btn-more',
-            '.btn-expand'
-        ];
-        const matchesSelector = expandSelectors.some(selector => {
-            try {
-                return element.matches(selector);
-            } catch (e) {
-                return false;
-            }
-        });
-        return hasExpandText || hasExpandClass || matchesSelector;
-    }
-
     function autoClickExpandButton() {
         const allElements = document.querySelectorAll('button, a, span, div');
         allElements.forEach(element => {
@@ -848,68 +808,6 @@
         });
     }
 
-    function fireClickSequence(el){
-        try{
-            const rect = el.getBoundingClientRect();
-            const x = rect.left + Math.min(rect.width*0.6, 10);
-            const y = rect.top + Math.min(rect.height*0.6, 10);
-            const opts = { bubbles:true, cancelable:true, clientX:x, clientY:y };
-            el.dispatchEvent(new MouseEvent('mouseover', opts));
-            el.dispatchEvent(new MouseEvent('mouseenter', opts));
-            el.dispatchEvent(new MouseEvent('mousedown', opts));
-            el.dispatchEvent(new MouseEvent('mouseup', opts));
-            el.dispatchEvent(new MouseEvent('click', opts));
-        }catch(_){}
-    }
-
-    function isSafeClickable(el){
-        try{
-            const tag = (el.tagName||'').toLowerCase();
-            const href = (el.getAttribute && el.getAttribute('href')) || '';
-            const role = (el.getAttribute && el.getAttribute('role')) || '';
-            const aria = (el.getAttribute && el.getAttribute('aria-label')) || '';
-            const txt = (el.textContent||'').trim();
-            const cls = (el.className||'').toLowerCase();
-            const id = (el.id||'').toLowerCase();
-            const deny = ['下载','download','分享','share','购买','buy','充值','recharge','关注','收藏','comment','评论'];
-            if (deny.some(k=> txt.includes(k) || cls.includes(k) || id.includes(k) || aria.toLowerCase().includes(k))) return false;
-            if (tag === 'a' && href && !href.startsWith('#')) return false;
-            if (role && role.toLowerCase() !== 'button' && tag !== 'button'){
-                if (!cls.includes('vjs-big-play-button') && !cls.includes('play')) return false;
-            }
-            return true;
-        }catch(_){ return false; }
-    }
-
-    function triggerNativePreview(){
-        try{
-            const containerSel = ['.video-js', '.vjs-player', '.vjs', '.plyr', '#player', '.player', '.video-container', '[data-player]'];
-            const containers = containerSel.map(s=>Array.from(document.querySelectorAll(s))).flat();
-            const keywords = ['预览','试看','播放','play','preview','start','watch'];
-            const ctrlSel = ['.vjs-big-play-button','button','.plyr__control','[role="button"]'];
-            for (const c of containers){
-                const nodes = Array.from(c.querySelectorAll(ctrlSel.join(',')));
-                for (const n of nodes){
-                    const txt = (n.textContent||n.innerText||'').trim();
-                    const aria = (n.getAttribute && n.getAttribute('aria-label')) || '';
-                    const cls = (n.className||'');
-                    const id = n.id||'';
-                    const hit = keywords.some(k=> txt.includes(k) || aria.includes(k) || cls.includes(k) || id.includes(k))
-                               || /vjs-big-play-button|plyr|play/i.test(cls);
-                    if (!hit) continue;
-                    if (!isSafeClickable(n)) continue;
-                    if (getComputedStyle(n).display !== 'none' && n.offsetParent){
-                        try{ n.scrollIntoView({block:'center', inline:'center'}); }catch(_){}
-                        fireClickSequence(n);
-                        return true;
-                    }
-                }
-            }
-            const v = document.querySelector('video');
-            if (v && v.parentElement && isSafeClickable(v.parentElement)) { fireClickSequence(v.parentElement); return true; }
-        }catch(_){}
-        return false;
-    }
 
     async function ensurePreviewTriggered(maxTries=6, intervalMs=600){
         for (let i=0;i<maxTries;i++){
@@ -1234,7 +1132,7 @@
         if (downloadBtn) downloadBtn.classList.toggle('hj-btn-ready', on);
     }
 
-    // 账户弹窗：完全免登录，显示会员已激活
+    // 账户弹窗
     async function showAccountModal() {
         const existed = document.querySelector('.hj-modal-overlay[data-type="account"]');
         if (existed){ existed.remove(); accModalOpen = false; setPanelModalMode(false); ensurePanelVisible(); return; }
@@ -1515,23 +1413,56 @@
         }
     }
 
-    async function downloadVideo(){
-        const existed = document.querySelector('.hj-modal-overlay[data-type="download"]');
-        if (existed){ existed.remove(); downloadOpen = false; return; }
-        if (downloadOpen) return;
+    // 修复下载功能 - 确保每次点击都能正常显示
+    async function downloadVideo() {
+        // 如果已经有下载弹窗存在，先关闭它
+        const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
+        if (existingModal) {
+            existingModal.remove();
+            downloadOpen = false;
+            // 等待一帧再打开新的
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (downloadOpen) {
+            downloadOpen = false;
+            return;
+        }
+        
         downloadOpen = true;
-        if (!capturedM3u8Url){ downloadOpen = false; alert('❌ 未捕获到视频URL，请稍后重试'); return; }
-        try{
-            const tsSample = (capturedTsUrls && capturedTsUrls.length>0) ? [capturedTsUrls[0]] : [];
-            const fullUrl = await resolveFullFromServer({ pageUrl: location.href, previewM3u8Url: capturedM3u8Url, tsSamples: tsSample });
+        
+        // 检查是否有视频URL
+        if (!capturedM3u8Url) {
+            showToast('❌ 未捕获到视频URL，请稍后重试');
+            downloadOpen = false;
+            return;
+        }
+        
+        try {
+            const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
+            const fullUrl = await resolveFullFromServer({ 
+                pageUrl: location.href, 
+                previewM3u8Url: capturedM3u8Url, 
+                tsSamples: tsSample 
+            });
             showDownloadModal(fullUrl || capturedM3u8Url);
-        }catch(_){ showDownloadModal(capturedM3u8Url); }
+        } catch (_) {
+            showDownloadModal(capturedM3u8Url);
+        }
     }
 
     function showDownloadModal(displayUrl) {
+        // 确保之前的弹窗已关闭
+        const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
+        if (existingModal) {
+            existingModal.remove();
+            downloadOpen = false;
+        }
+        
         const modal = document.createElement('div');
         modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type','download');
+        modal.setAttribute('data-type', 'download');
+        modal.style.zIndex = '1000005';
         modal.innerHTML = `
             <div class="hj-modal" style="max-width: 600px;">
                 <div class="hj-modal-title">📥 视频下载</div>
@@ -1542,7 +1473,7 @@
                     <div style="margin-bottom: 8px; color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500;">
                         视频链接：
                     </div>
-                    <textarea id="hj-download-url" readonly style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:12px;font-family:'Courier New',monospace;resize:vertical;word-break:break-all;outline:none;">${displayUrl||''}</textarea>
+                    <textarea id="hj-download-url" readonly style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:12px;font-family:'Courier New',monospace;resize:vertical;word-break:break-all;outline:none;">${escapeHtml(String(displayUrl || ''))}</textarea>
                 </div>
                 <div class="hj-modal-actions" style="flex-direction:column;gap:10px;">
                     <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 复制链接</button>
@@ -1550,23 +1481,63 @@
                     <button class="hj-modal-btn" id="hj-download-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
                 </div>
             </div>`;
+        
         document.body.appendChild(modal);
-        const closeAll = ()=>{ downloadOpen = false; modal.remove(); };
-        modal.addEventListener('click', (e)=>{ if (e.target===modal) closeAll(); });
+        
+        const closeModal = () => {
+            if (modal && modal.remove) {
+                modal.remove();
+            }
+            downloadOpen = false;
+            // 恢复面板可见性
+            setPanelModalMode(false);
+            ensurePanelVisible();
+        };
+        
+        modal.addEventListener('click', (e) => { 
+            if (e.target === modal) closeModal(); 
+        });
+        
         const copyBtn = document.getElementById('hj-download-copy');
-        if (copyBtn) copyBtn.addEventListener('click', ()=>{
-            const val = String(displayUrl||'');
-            if (navigator.clipboard) navigator.clipboard.writeText(val).catch(()=>{});
-        });
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const val = String(displayUrl || '');
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(val).then(() => {
+                        showToast('✅ 链接已复制');
+                    }).catch(() => {
+                        showToast('❌ 复制失败，请手动复制');
+                    });
+                } else {
+                    // 降级方案
+                    const textarea = document.createElement('textarea');
+                    textarea.value = val;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast('✅ 链接已复制');
+                }
+            });
+        }
+        
         const goBtn = document.getElementById('hj-download-go');
-        if (goBtn) goBtn.addEventListener('click', ()=>{
-            const val = String(displayUrl||'');
-            if (navigator.clipboard) navigator.clipboard.writeText(val).catch(()=>{});
-            window.open('https://blog.luckly-mjw.cn/tool-show/m3u8-downloader/index.html','_blank');
-            closeAll();
-        });
+        if (goBtn) {
+            goBtn.addEventListener('click', () => {
+                const val = String(displayUrl || '');
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(val).catch(() => {});
+                }
+                window.open('https://blog.luckly-mjw.cn/tool-show/m3u8-downloader/index.html', '_blank');
+                closeModal();
+            });
+        }
+        
         const closeBtn = document.getElementById('hj-download-close');
-        if (closeBtn) closeBtn.addEventListener('click', closeAll);
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        
+        // 确保弹窗显示后面板可见
+        setPanelModalMode(true);
     }
 
     async function playFullVideo(allowPreview=false){
