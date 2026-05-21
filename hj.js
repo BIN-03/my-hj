@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.16
+// @version      1.0.17
 // @description  ⚡作者QQ 703860120。观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      703860120
 // @include      *://hj*.*/*
@@ -30,146 +30,88 @@
 // 版本更新检测
     function getCurrentVersion() {
         if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
-            return GM_info.script.version;
+            return GM_info.script.version.trim();
         }
         return '1.0.0';
     }
     const SCRIPT_VERSION = getCurrentVersion();
-        const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/hj.js';
-    // 
+    const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/hj.js';
+    // 获取线上版本
     async function getLatestVersionFromGitHub() {
         try {
-            const response = await new Promise((resolve, reject) => {
+            const res = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: GITHUB_VERSION_URL + '?_=' + Date.now(),
                     timeout: 8000,
-                    onload: (res) => resolve(res),
-                    onerror: (err) => reject(err)
+                    onload: resolve,
+                    onerror: reject
                 });
             });
-            if (response && response.status === 200) {
-                const content = response.responseText;
-                const versionMatch = content.match(/@version\s+([\d.]+)/);
-                if (versionMatch && versionMatch[1]) {
-                    return versionMatch[1];
-                }
+            if (res.status === 200) {
+                const reg = res.responseText.match(/@version\s*([\d.]+)/);
+                return reg ? reg[1].trim() : null;
             }
-            return null;
-        } catch (e) {
-            return null;
-        }
+        } catch (e) {}
+        return null;
     }
 
-    // 显示居中更新弹窗
+    // 弹窗提示
     let lastNotifyTime = 0;
     function showUpdateNotification(newVersion) {
-        // 防止短时间内重复弹窗（1秒内只弹一次）
         const now = Date.now();
         if (now - lastNotifyTime < 500) return;
         lastNotifyTime = now;
-        
-        // 移除已存在的弹窗
-        const existing = document.getElementById('hj-update-notification');
-        if (existing) existing.remove();
-        
-        // 添加动画样式
-        if (!document.getElementById('hj-update-animation-style')) {
-            const style = document.createElement('style');
-            style.id = 'hj-update-animation-style';
-            style.textContent = `
-                @keyframes hjUpdateFadeIn {
-                    from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-                    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        const notification = document.createElement('div');
-        notification.id = 'hj-update-notification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 16px;
-            font-size: 16px;
-            z-index: 1000009;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            animation: hjUpdateFadeIn 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.2);
+
+        if(document.getElementById('hj-update-notification')) return;
+
+        const style = document.createElement('style');
+        style.textContent =`
+        @keyframes hjUpdateFadeIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
         `;
-        notification.innerHTML = `
-            <span style="font-size: 18px;">🎉</span>
-            <span>发现新版本 v${newVersion}（当前 v${SCRIPT_VERSION}）</span>
-            <button id="hj-update-now-btn" style="
-                background: rgba(255,255,255,0.25);
-                border: none;
-                color: white;
-                padding: 8px 18px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: 500;
-            ">立即更新</button>
-            <button id="hj-update-dismiss-btn" style="
-                background: none;
-                border: none;
-                color: rgba(255,255,255,0.7);
-                cursor: pointer;
-                font-size: 20px;
-                padding: 0 5px;
-            ">✕</button>
+        document.head.appendChild(style);
+
+        const box = document.createElement('div');
+        box.id = 'hj-update-notification';
+        box.style.cssText = `
+        position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+        background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;
+        padding:20px 30px;border-radius:16px;font-size:16px;z-index:9999;
+        display:flex;gap:20px;align-items:center;animation:hjUpdateFadeIn 0.3s ease;
+        border:1px solid rgba(255,255,255,0.2);
         `;
-        document.body.appendChild(notification);
-        
-        // 跳转定地址
-        document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
-            window.open(GITHUB_VERSION_URL, '_blank');
-        });
-        document.getElementById('hj-update-dismiss-btn')?.addEventListener('click', () => {
-            notification.remove();
-        });
-        
-        // 8秒后自动消失
-        setTimeout(() => {
-            if (notification && notification.remove) notification.remove();
-        }, 8000);
+        box.innerHTML = `
+        <span style="font-size:18px;">🎉</span>
+        <span>发现新版本 v${newVersion}（当前 v${SCRIPT_VERSION}）</span>
+        <button id="upBtn" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px;">立即更新</button>
+        <button id="closeBtn" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:20px;">✕</button>
+        `;
+        document.body.appendChild(box);
+
+        document.getElementById('upBtn').onclick = ()=>{
+            window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
+            box.remove();
+        };
+        document.getElementById('closeBtn').onclick = ()=> box.remove();
+
+        setTimeout(()=> box.remove(),8000);
     }
 
-    // 功能：检查更新（立即执行，无延迟）
-    let lastVersionCheck = null;
-    let lastVersionResult = null;
+    // 检测更新主体
     async function checkForUpdate() {
-        try {
-            const latestVersion = await getLatestVersionFromGitHub();
-            if (latestVersion && latestVersion !== SCRIPT_VERSION) {
-                lastVersionResult = latestVersion;
-                showUpdateNotification(latestVersion);
-                return true;
-            }
-            return false;
-        } catch (e) {
-            return false;
+        const latestVer = await getLatestVersionFromGitHub();
+        
+        if(latestVer && latestVer !== SCRIPT_VERSION){
+            showUpdateNotification(latestVer);
         }
     }
 
-    // 功能：检查本地版本变化
+    // 每次启动强制同步当前真实版本，清除旧残留
     function checkLocalVersionUpdate() {
-        const lastVersion = GM_getValue('last_run_version', '');
-        if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-            setTimeout(() => showToast(`✨ 脚本已从 v${lastVersion} 更新到 v${SCRIPT_VERSION}`), 3000);
-        }
         GM_setValue('last_run_version', SCRIPT_VERSION);
     }
+
+    // 启动检测
     checkForUpdate();
     checkLocalVersionUpdate();
     // 
