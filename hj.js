@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.18
+// @version      1.0.19
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @include      *://hj*.*/*
@@ -163,7 +163,7 @@
     function checkLocalVersionUpdate() {
         const lastVersion = GM_getValue('last_run_version', '');
         if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-            setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`) 请重新打开浏览器, 3000);
+            setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}请重新打开浏览器`), 3000);
         }
         GM_setValue('last_run_version', SCRIPT_VERSION);
     }
