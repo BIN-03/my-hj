@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.26
+// @version      1.0.28
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @include      *://hj*.*/*
@@ -68,7 +68,6 @@ function showUpdateNotification(newVersion) {
     const now = Date.now();
     if (now - lastNotifyTime < 500) return;
     lastNotifyTime = now;
-    
     const existing = document.getElementById('hj-update-notification');
     if (existing) existing.remove();
     
@@ -137,11 +136,10 @@ function showUpdateNotification(newVersion) {
         </div>
     `;
     document.body.appendChild(notification);
-
     document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
         window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
         notification.remove();
-        alert('完成安装后关闭浏览器，重启生效');
+        alert('安装后请重新打开浏览器生效');
     });
     document.getElementById('hj-close-btn')?.addEventListener('click', () => {
         notification.remove();
@@ -168,9 +166,10 @@ async function checkForUpdate() {
 
 // 检查本地版本变化
 function checkLocalVersionUpdate() {
-    const oldVersion = GM_getValue('last_run_version', '');
-    if (oldVersion && oldVersion !== SCRIPT_VERSION) {
-        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}，重新打浏览器生效`), 3000);
+    GM_deleteValue('last_run_version');
+    const lastVersion = GM_getValue('last_run_version', '');
+    if (lastVersion && lastVersion !== SCRIPT_VERSION) {
+        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
     }
     GM_setValue('last_run_version', SCRIPT_VERSION);
 }
