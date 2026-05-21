@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.9
+// @version      1.0.11
 // @description  ⚡作者QQ 703860120。观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      703860120
 // @include      *://hj*.*/*
