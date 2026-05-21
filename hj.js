@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.20
+// @version      1.0.21
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @include      *://hj*.*/*
@@ -107,7 +107,7 @@ function showUpdateNotification(newVersion) {
     `;
     notification.innerHTML = `
         <span style="font-size: 18px;">🎉</span>
-        <span>发现新版本 v${newVersion}（当前 v${SCRIPT_VERSION}）</span>
+        <span>发现新版本 v${newVersion}</span>
         <button id="hj-update-now-btn" style="
             background: rgba(255,255,255,0.25);
             border: none;
