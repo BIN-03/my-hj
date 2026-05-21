@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.22
+// @version      1.0.23
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @include      *://hj*.*/*
@@ -68,7 +68,6 @@ function showUpdateNotification(newVersion) {
     const now = Date.now();
     if (now - lastNotifyTime < 500) return;
     lastNotifyTime = now;
-    
     const existing = document.getElementById('hj-update-notification');
     if (existing) existing.remove();
     
@@ -93,51 +92,56 @@ function showUpdateNotification(newVersion) {
         transform: translate(-50%, -50%);
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 20px 30px;
-        border-radius: 16px;
-        font-size: 16px;
+        padding: 18px 16px;
+        border-radius: 12px;
+        font-size: 14px;
         z-index: 1000009;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
         display: flex;
-        gap: 20px;
+        flex-direction: column;
         align-items: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        gap: 18px;
+        font-family: sans-serif;
         animation: hjUpdateFadeIn 0.3s ease;
         border: 1px solid rgba(255,255,255,0.2);
+        width: 240px;
     `;
+
     notification.innerHTML = `
-        <span style="font-size: 18px;">🎉</span>
-        <span>发现新版本 v${newVersion}（当前 v${SCRIPT_VERSION}）</span>
-        <button id="hj-update-now-btn" style="
-            background: rgba(255,255,255,0.25);
-            border: none;
-            color: white;
-            padding: 8px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-        ">立即更新</button>
-        <button id="hj-update-dismiss-btn" style="
-            background: none;
-            border: none;
-            color: rgba(255,255,255,0.7);
-            cursor: pointer;
-            font-size: 20px;
-            padding: 0 5px;
-        ">✕</button>
+        <div style="text-align:center;">
+            <div style="font-size:18px;font-weight:600;margin-bottom:6px;">发现新版本</div>
+            <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
+        </div>
+        <div style="display:flex;gap:10px;width:100%;">
+            <button id="hj-close-btn" style="
+                background:rgba(255,255,255,0.15);
+                border:none;
+                color:white;
+                padding:10px 0;
+                border-radius:8px;
+                cursor:pointer;
+                font-size:14px;
+                flex:1;
+            ">关闭</button>
+            <button id="hj-update-now-btn" style="
+                background:#4facfe;
+                border:none;
+                color:white;
+                padding:10px 0;
+                border-radius:8px;
+                cursor:pointer;
+                font-size:14px;
+                flex:1;
+            ">立即更新</button>
+        </div>
     `;
     document.body.appendChild(notification);
-
     document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
-        // 更新地址
         window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
-        setTimeout(() => {
-            alert('✅ 脚本更新页面已打开！\n1. 请完成油猴安装\n2. 安装后关闭此标签页\n3. 刷新原页面即可生效');
-        }, 300);
         notification.remove();
+        alert('跳转更新页面，安装完成重新打开网站');
     });
-    document.getElementById('hj-update-dismiss-btn')?.addEventListener('click', () => {
+    document.getElementById('hj-close-btn')?.addEventListener('click', () => {
         notification.remove();
     });
     
@@ -147,13 +151,10 @@ function showUpdateNotification(newVersion) {
 }
 
 // 检查更新
-let lastVersionCheck = null;
-let lastVersionResult = null;
 async function checkForUpdate() {
     try {
         const latestVersion = await getLatestVersionFromGitHub();
         if (latestVersion && latestVersion !== SCRIPT_VERSION) {
-            lastVersionResult = latestVersion;
             showUpdateNotification(latestVersion);
             return true;
         }
@@ -168,7 +169,7 @@ function checkLocalVersionUpdate() {
     GM_deleteValue('last_run_version');
     const lastVersion = GM_getValue('last_run_version', '');
     if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}，请刷新页面生效`), 3000);
+        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
     }
     GM_setValue('last_run_version', SCRIPT_VERSION);
 }
