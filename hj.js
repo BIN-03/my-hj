@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.3
+// @version      1.0.31
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -116,6 +116,7 @@ function showUpdateNotification(newVersion) {
     notification.innerHTML = `
         <div style="text-align:center;">
             <div style="font-size:18px;font-weight:600;margin-bottom:6px;">发现新版本</div>
+            <div style="font-size:12px;font-weight:300;margin-bottom:6px;color:yellow">Tips:安卓用户重新在脚本页面添加一次链接即可</div>
             <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
         </div>
         <div style="display:flex;gap:10px;width:100%;">
@@ -1966,7 +1967,7 @@ checkForUpdate();
     }
 
     function init() {
-        // 需求1：加载页面就提示更新
+        // 页面加载检测版本是否最新
         checkLocalVersionUpdate();
         checkForUpdate();
 
