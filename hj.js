@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.29
+// @version      1.0.3
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -19,12 +19,17 @@
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_deleteValue
 // @grant        GM_info
-// @license      MIT
 // @grant        GM_xmlhttpRequest
+// @license      MIT
 // ==/UserScript==
 (function() {
 'use strict';
+if (typeof API_BASE === 'undefined') var API_BASE = '';
+if (typeof SERVICE_BASE === 'undefined') var SERVICE_BASE = location.origin + '/api';
+if (typeof authStorage === 'undefined') var authStorage = {};
+
 // 版本更新检测
 function getCurrentVersion() {
     if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
@@ -165,9 +170,9 @@ async function checkForUpdate() {
     }
 }
 
-// 检查本地版本变化
+// 检查本地版本变化（增加 GM_deleteValue 的容错）
 function checkLocalVersionUpdate() {
-    GM_deleteValue('last_run_version');
+    try { GM_deleteValue('last_run_version'); } catch(e) { /* 兼容不支持的环境 */ }
     const lastVersion = GM_getValue('last_run_version', '');
     if (lastVersion && lastVersion !== SCRIPT_VERSION) {
         setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
@@ -176,7 +181,6 @@ function checkLocalVersionUpdate() {
 }
 checkLocalVersionUpdate();
 checkForUpdate();
-    
     
     // 使用 GM_xmlhttpRequest 封装
     function gmRequest(url, opts={}) {
@@ -897,7 +901,7 @@ checkForUpdate();
                         forceRecaptureForCurrentPage(5000).then((ok)=>{
                             try{
                                 if (ok && (isFullReady() || (capturedM3u8Url && sigCaptured===currentSig()))){
-                                    if (el && el.id === 'hj-btn-play'){ try{ playFullVideo(true); }catch(_){} }
+                                    if (el && el.id === 'hj-btn-play'){ try{ playFullVideo(true); }catch(_){ } }
                                 }
                             }finally{ window.__hj_recap_inflight = false; updateStrictUi(); }
                         });
@@ -906,7 +910,7 @@ checkForUpdate();
                 }
                 if (el.id === 'hj-btn-play'){
                     if (STRICT_MODE && notReady){
-                        if (capturedM3u8Url && sigCaptured===currentSig()) { try{ playFullVideo(true); }catch(_){} return; }
+                        if (capturedM3u8Url && sigCaptured===currentSig()) { try{ playFullVideo(true); }catch(_){ } return; }
                         showToast('视频还在解析中，请等几秒钟哦~'); return;
                     }
                     try{ playFullVideo(); }catch(_){ }
