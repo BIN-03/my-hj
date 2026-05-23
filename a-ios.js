@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.0.31
+// @version      1.0.32
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -38,7 +38,7 @@ function getCurrentVersion() {
     return '1.0.0';
 }
 const SCRIPT_VERSION = getCurrentVersion();
-const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/hj.js';
+const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/a-ios.js';
 
 async function getLatestVersionFromGitHub() {
     try {
