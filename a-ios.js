@@ -1,19 +1,13 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
 // @version      1.1.4
-// @description  ⚡支持观看及下载视频，已移除付费金币/钻石，直接使用。⚡
-// @author      作者703860120
+// @description  ⚡支持观看及下载视频，已移除付费金币/钻石/去除站内广告，直接使用。⚡
+// @author       作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://hj*.*/*
 // @match        https://haijiao.com/*
 // @match        https://*.haijiao.com/*
-// @match        https://91hjav.com/*
-// @match        https://*.91hjav.com/*
-// @match        https://hjav18.net/*
-// @match        https://*.hjav18.net/*
 // @match        https://hj251101e0b.top/*
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.8/hls.min.js
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_addStyle
@@ -24,12 +18,12 @@
 // @grant        GM_xmlhttpRequest
 // @license      MIT
 // ==/UserScript==
+
 (function() {
 'use strict';
-if (typeof API_BASE === 'undefined') var API_BASE = '';
-if (typeof SERVICE_BASE === 'undefined') var SERVICE_BASE = location.origin + '/api';
-if (typeof authStorage === 'undefined') var authStorage = {};
-let currentPlayingUrl = null;  
+
+let currentPlayingUrl = null;
+
 // 版本更新检测
 function getCurrentVersion() {
     if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
@@ -37,6 +31,7 @@ function getCurrentVersion() {
     }
     return '1.0.0';
 }
+
 const SCRIPT_VERSION = getCurrentVersion();
 const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/a-ios.js';
 
@@ -76,7 +71,7 @@ function showUpdateNotification(newVersion) {
     lastNotifyTime = now;
     const existing = document.getElementById('hj-update-notification');
     if (existing) existing.remove();
-    
+
     if (!document.getElementById('hj-update-animation-style')) {
         const style = document.createElement('style');
         style.id = 'hj-update-animation-style';
@@ -88,7 +83,7 @@ function showUpdateNotification(newVersion) {
         `;
         document.head.appendChild(style);
     }
-    
+
     const notification = document.createElement('div');
     notification.id = 'hj-update-notification';
     notification.style.cssText = `
@@ -146,12 +141,12 @@ function showUpdateNotification(newVersion) {
     document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
         window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
         notification.remove();
-        alert('安装后请重新打开浏览器生效');
+        alert('安装后关闭海角页面/重启浏览器生效');
     });
     document.getElementById('hj-close-btn')?.addEventListener('click', () => {
         notification.remove();
     });
-    
+
     setTimeout(() => {
         if (notification && notification.remove) notification.remove();
     }, 8000);
@@ -171,9 +166,9 @@ async function checkForUpdate() {
     }
 }
 
-// 检查本地版本变化（增加 GM_deleteValue 的容错）
+// 检查本地版本变化
 function checkLocalVersionUpdate() {
-    try { GM_deleteValue('last_run_version'); } catch(e) { /* 兼容不支持的环境 */ }
+    try { GM_deleteValue('last_run_version'); } catch(e) { }
     const lastVersion = GM_getValue('last_run_version', '');
     if (lastVersion && lastVersion !== SCRIPT_VERSION) {
         setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
@@ -182,7 +177,7 @@ function checkLocalVersionUpdate() {
 }
 checkLocalVersionUpdate();
 checkForUpdate();
-    
+
     // 使用 GM_xmlhttpRequest 封装
     function gmRequest(url, opts={}) {
         const method = (opts.method||'GET').toUpperCase();
@@ -212,13 +207,6 @@ checkForUpdate();
                 }
             });
         });
-    }
-
-    try{ if (typeof unsafeWindow !== 'undefined'){ unsafeWindow.authStorage = authStorage; unsafeWindow.API_BASE = API_BASE; } }catch(_){ }
-
-    async function apiFetch(path, opts={}) {
-        const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
-        return await gmRequest(API_BASE + path, Object.assign({}, opts, { headers }));
     }
 
     function escapeHtml(str){
@@ -384,7 +372,7 @@ checkForUpdate();
             }
         });
     }
-    
+
     async function serviceFetch(path, opts={}) {
         const headers = Object.assign({}, opts.headers || {});
         const method = (opts.method||'GET').toUpperCase();
@@ -888,9 +876,9 @@ checkForUpdate();
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 e.preventDefault();
-                
+
                 checkForUpdate();
-                
+
                 const notReady = !isFullReady();
                 if (notReady && !isSignatureAligned()){
                     if (!window.__hj_recap_inflight){
@@ -959,8 +947,6 @@ checkForUpdate();
         if (!el) return false;
         return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
     }
-
-
 
     function autoClickExpandButton() {
         const allElements = document.querySelectorAll('button, a, span, div');
@@ -1204,16 +1190,14 @@ checkForUpdate();
                             </svg>
                         </button>
                         <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <path d="M3 5h18M3 12h18M3 19h18"/>
-                            </svg>
+                                  <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png" style="width: 28px; height: 28px; border-radius: 6px;">
                         </button>
-                        <button class="hj-btn hj-btn-key" id="hj-btn-key" title="账户中心">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                            </svg>
-                        </button>
+                       <button class="hj-btn hj-btn-key" id="hj-btn-key" title="账户中心">
+                              <svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5">
+                                    <path d="M10 10c1.84 0 3.33-1.49 3.33-3.33S11.84 3.33 10 3.33 6.67 4.82 6.67 6.67 8.16 10 10
+                                                    10zm0 1.67c-2.22 0-6.67 1.12-6.67 3.33v1.67h13.34V15c0-2.21-4.45-3.33-6.67-3.33z"/>
+                              </svg>
+                      </button>
                     </div>
                 </div>
             </div>
@@ -1221,14 +1205,14 @@ checkForUpdate();
 
         document.body.appendChild(panel);
         setupPanelEvents(panel);
-        
+
         attachPlayHandler();
         attachDownloadHandler();
 
         if (capturedM3u8Url) { updatePlayButton(); }
         uiCreated = true;
         const panelEl = document.querySelector('.hj-floating-panel');
-        const rebind = ()=>{ 
+        const rebind = ()=>{
             if (panelEl && panelEl.dataset.bound !== '1') setupPanelEvents(panelEl);
             attachPlayHandler();
             attachDownloadHandler();
@@ -1339,12 +1323,12 @@ checkForUpdate();
                 <div class="hj-modal-title">🔐 账户中心</div>
                 <div class="hj-modal-content" style="overflow:auto;">
                     <div class="hj-modal-row">
-                        <span class="hj-modal-label">状态</span>
-                        <span class="hj-modal-value">✅ 正式版</span>
+                        <span class="hj-modal-label">版本</span>
+                        <span class="hj-modal-value">👑 正式版 </span>
                     </div>
                     <div class="hj-modal-row">
-                        <span class="hj-modal-label">VIP 到期</span>
-                        <span class="hj-modal-value">长期</span>
+                        <span class="hj-modal-label">VIP </span>
+                        <span class="hj-modal-value">💎 长期</span>
                     </div>
                 </div>
                 <div class="hj-modal-actions" style="flex-direction: column;">
@@ -1393,7 +1377,6 @@ checkForUpdate();
         if (overlay) {
             overlay.remove();
         }
-        // 清空当前播放地址
         currentPlayingUrl = null;
     }
 
@@ -1406,7 +1389,6 @@ checkForUpdate();
                 currentHlsInstance.stopLoad?.();
                 currentHlsInstance.loadSource(url);
                 currentHlsInstance.startLoad?.();
-                // 更新当前播放地址
                 currentPlayingUrl = url;
             } else if (v && v.canPlayType('application/vnd.apple.mpegurl')){
                 v.src = url;
@@ -1427,7 +1409,7 @@ checkForUpdate();
                     <h3>🎬 完整视频播放</h3>
                     <button class="close-btn" id="close-player-btn">✕</button>
                 </div>
-                <div class="video-tips">💡 如果视频不能正常播放请检查您的网络环境，支持拖动，倍速播放哦~</div>
+                <div class="video-tips">💡 如果视频不能正常播放请检查您的网络环境~</div>
                 <video id="hls-video" controls autoplay style="width:100%;max-height:70vh;background:#000;">
                     您的浏览器不支持视频播放
                 </video>
@@ -1585,72 +1567,50 @@ checkForUpdate();
             clearInterval(longPressInterval);
         });
 
-        if (Hls.isSupported()) {
-            const video = document.getElementById('hls-video');
-            const hls = new Hls();
-            currentHlsInstance = hls;
-            hls.loadSource(m3u8Url);
-            hls.attachMedia(video);
-            // 记录当前播放的地址
-            currentPlayingUrl = m3u8Url;
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play();
-            });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    alert('视频加载失败，请尝试复制链接使用其他播放器');
-                }
-            });
-        } else if (document.getElementById('hls-video').canPlayType('application/vnd.apple.mpegurl')) {
+      if (document.getElementById('hls-video').canPlayType('application/vnd.apple.mpegurl')) {
             document.getElementById('hls-video').src = m3u8Url;
             currentPlayingUrl = m3u8Url;
         } else {
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
+
 // 下载弹窗
 async function downloadVideo() {
     checkForUpdate();
-    // 如果弹窗已经打开，就聚焦
     const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
     if (existingModal) {
-        // 滚动到弹窗位置，或只是闪烁一下提示
         existingModal.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
         showToast('📥 下载窗口已打开');
         return;
     }
-    
+
     downloadOpen = true;
-    
-    // 立即使用当前已有的视频地址显示弹窗（如果有）
+
     let initialUrl = lastFullUrl || capturedM3u8Url || null;
     if (!initialUrl) {
         showToast('❌ 未捕获到视频URL，请稍后重试');
         downloadOpen = false;
         return;
     }
-    
-    // 立即显示弹窗，避免等待网络请求
-    showDownloadModal(initialUrl, true);  // 第二个参数表示“正在后台获取完整版”
-    
-    // 后台异步尝试获取完整版链接（如果有预览版且尚未拿到完整版）
+
+    showDownloadModal(initialUrl, true);
+
     if (initialUrl && !isFullReady()) {
         try {
             const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
-            const fullUrl = await resolveFullFromServer({ 
-                pageUrl: location.href, 
-                previewM3u8Url: capturedM3u8Url, 
-                tsSamples: tsSample 
+            const fullUrl = await resolveFullFromServer({
+                pageUrl: location.href,
+                previewM3u8Url: capturedM3u8Url,
+                tsSamples: tsSample
             });
             if (fullUrl && fullUrl !== initialUrl) {
-                // 更新弹窗中的 URL
                 const urlTextarea = document.getElementById('hj-download-url');
                 if (urlTextarea) {
                     urlTextarea.value = fullUrl;
                     urlTextarea.classList.add('hj-url-updated');
                     showToast('✨ 已更新为完整版视频链接');
                 }
-                // 同时更新全局变量
                 lastFullUrl = fullUrl;
                 capturedM3u8Url = fullUrl;
                 sigFull = currentSig();
@@ -1663,17 +1623,16 @@ async function downloadVideo() {
 
 // 弹窗显示
 function showDownloadModal(displayUrl, isLoading = false) {
-    // 如果已存在则直接返回
     const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
     if (existingModal) return;
-    
+
     const modal = document.createElement('div');
     modal.className = 'hj-modal-overlay';
     modal.setAttribute('data-type', 'download');
     modal.style.zIndex = '1000005';
-    
+
     const loadingHint = isLoading ? '<div style="font-size:12px; margin-top:6px; color: #ffd966;">⏳ 后台正在获取完整版链接，会自动更新...</div>' : '';
-    
+
     modal.innerHTML = `
         <div class="hj-modal" style="max-width: 600px;">
             <div class="hj-modal-title">📥 视频下载</div>
@@ -1693,9 +1652,9 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 <button class="hj-modal-btn" id="hj-download-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
             </div>
         </div>`;
-    
+
     document.body.appendChild(modal);
-    
+
     const closeModal = () => {
         if (modal && modal.remove) {
             modal.remove();
@@ -1704,11 +1663,11 @@ function showDownloadModal(displayUrl, isLoading = false) {
         setPanelModalMode(false);
         ensurePanelVisible();
     };
-    
-    modal.addEventListener('click', (e) => { 
-        if (e.target === modal) closeModal(); 
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
     });
-    
+
     const copyBtn = document.getElementById('hj-download-copy');
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
@@ -1730,7 +1689,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
             }
         });
     }
-    
+
     const goBtn = document.getElementById('hj-download-go');
     if (goBtn) {
         goBtn.addEventListener('click', () => {
@@ -1749,15 +1708,16 @@ function showDownloadModal(displayUrl, isLoading = false) {
             closeModal();
         });
     }
-    
+
     const closeBtn = document.getElementById('hj-download-close');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    
+
     setPanelModalMode(true);
 }
+
     async function playFullVideo(allowPreview=false){
         checkForUpdate();
-        
+
         if (inFlightPlay) return;
         inFlightPlay = true;
         try{
@@ -1780,10 +1740,8 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 if (!capturedM3u8Url || sigCaptured!==currentSig()){ showToast('未捕获到视频地址，请稍后重试'); inFlightPlay = false; return; }
             }
             const preferred = await ensureFullBeforePlay(6000);
-            if (STRICT_MODE && !preferred){
-                if (!(allowPreview && capturedM3u8Url && sigCaptured===currentSig())){
-                    showToast('视频还在解析中，请等几秒钟哦~'); inFlightPlay = false; return;
-                }
+            if (STRICT_MODE && !preferred && !allowPreview){
+                showToast('视频还在解析中，请等几秒钟哦~'); inFlightPlay = false; return;
             }
             if (epochAtStart !== resolveEpoch || pageAtStart !== currentPageUrl) { inFlightPlay = false; return; }
             playVideoInPage(preferred || capturedM3u8Url);
@@ -1931,6 +1889,125 @@ function showDownloadModal(displayUrl, isLoading = false) {
         }catch(_){ }
     }
 
+    // ==================== 立即获取视频链接（核心修复） ====================
+    function immediateVideoCapture() {
+        // 只在帖子页面执行
+        if (!window.location.href.includes('/topic/') && !window.location.href.includes('/post/details')) {
+            return;
+        }
+
+        const topicId = getTopicIdFromUrl();
+        if (!topicId) return;
+
+        // 方法1: 通过API直接获取帖子详情
+        setTimeout(() => {
+            fetch(`${location.origin}/api/topic/${topicId}`, {
+                credentials: 'include',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.data) {
+                    let body = null;
+                    try { body = JSON.parse(data.data); } catch(e) {}
+                    if (!body) {
+                        try { body = JSON.parse(atob(data.data)); } catch(e) {}
+                    }
+                    if (!body) {
+                        try { body = JSON.parse(atob(atob(data.data))); } catch(e) {}
+                    }
+
+                    const attachments = body?.attachments || [];
+                    const videoAtt = attachments.find(a => a && a.category === 'video');
+
+                    if (videoAtt && videoAtt.remoteUrl && videoAtt.remoteUrl.includes('.m3u8')) {
+                        capturedM3u8Url = videoAtt.remoteUrl;
+                        sigCaptured = currentSig();
+                        showToast('🎬 已获取视频地址');
+                        startBackgroundResolve();
+                    } else if (videoAtt && videoAtt.id) {
+                        // 需要调用附件接口
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        fetch(`${location.origin}/api/attachment`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: videoAtt.id,
+                                resource_type: 'topic',
+                                resource_id: topicId,
+                                line: 'normal1',
+                                is_ios: isIOS ? 1 : 0
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(attachData => {
+                            const m3u8 = attachData?.remoteUrl || attachData?.data?.remoteUrl;
+                            if (m3u8 && m3u8.includes('.m3u8')) {
+                                capturedM3u8Url = m3u8;
+                                sigCaptured = currentSig();
+                                showToast('🎬 已获取视频地址');
+                                startBackgroundResolve();
+                            }
+                        })
+                        .catch(() => {});
+                    }
+                }
+            })
+            .catch(() => {});
+        }, 100);
+
+        // 方法2: 拦截并触发预览按钮
+        setTimeout(() => {
+            const previewBtn = document.querySelector('span.preview-btn, .preview-btn, [class*="preview"]');
+            if (previewBtn && !capturedM3u8Url) {
+                previewBtn.click();
+            }
+        }, 500);
+    }
+
+    // ==================== 主动触发原生预览 ====================
+    function triggerNativePreview() {
+        try {
+            // 查找所有可能的预览元素
+            const selectors = [
+                'span.preview-btn', '.preview-btn', '.play-video',
+                '[data-preview]', '.video-preview', '.preview-video',
+                '.play-btn', '[onclick*="preview"]', '[onclick*="play"]'
+            ];
+
+            for (let selector of selectors) {
+                const elements = document.querySelectorAll(selector);
+                for (let el of elements) {
+                    if (el.offsetParent !== null) {
+                        el.click();
+                        return true;
+                    }
+                }
+            }
+
+            // 查找视频区域并触发点击
+            const videoArea = document.querySelector('.html-box, .topic-content, .post-content, [class*="content"]');
+            if (videoArea && !capturedM3u8Url) {
+                videoArea.click();
+                return true;
+            }
+        } catch(_) {}
+        return false;
+    }
+
+    // 扩展 isExpandButton 函数
+    function isExpandButton(element) {
+        if (!element) return false;
+        const text = (element.innerText || '').toLowerCase();
+        const isExpand = text.includes('展开') || text.includes('查看更多') ||
+                        text.includes('阅读全文') || text.includes('show more') ||
+                        text.includes('expand');
+        const className = (element.className || '').toLowerCase();
+        const hasExpandClass = className.includes('expand') || className.includes('more');
+        return isExpand || hasExpandClass;
+    }
+
     function init() {
         checkLocalVersionUpdate();
         checkForUpdate();
@@ -1942,6 +2019,9 @@ function showDownloadModal(displayUrl, isLoading = false) {
         setupFetchAttachmentTap();
         setupPerfObserver();
         setupHlsHook();
+
+        // 🚀 立即捕获视频（关键修复）
+        immediateVideoCapture();
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
@@ -1962,11 +2042,14 @@ function showDownloadModal(displayUrl, isLoading = false) {
                     setTimeout(() => {
                         autoClickExpandButton();
                         autoTriggerVideoPreview();
+                        triggerNativePreview();
                     }, 1000);
 
                     setupAutoExpandObserver();
                     startPreviewWarmup();
-                    setTimeout(()=>{ try{ startBackgroundResolve(); }catch(_){ } }, 1200);
+                    setTimeout(()=>{
+                        try{ startBackgroundResolve(); } catch(_){ }
+                    }, 500);
                     startResolveWatchdog();
                     setTimeout(()=>lazyViewportWarmup(), 800);
                     updateStrictUi();
@@ -1990,6 +2073,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 setTimeout(() => {
                     autoClickExpandButton();
                     autoTriggerVideoPreview();
+                    triggerNativePreview();
                 }, 1000);
 
                 setupAutoExpandObserver();
@@ -2001,5 +2085,459 @@ function showDownloadModal(displayUrl, isLoading = false) {
     }
 
     init();
+
+})();
+
+// 广告功能模块
+(function() {
+    'use strict';
+    // 白名单，脚本自身组件的选择器
+    const scriptWhiteList = [
+        '.hj-floating-panel',           // 脚本悬浮面板
+        '.hj-panel-container',          // 面板容器
+        '.hj-toggle-btn',               // 折叠按钮
+        '.hj-panel-content',            // 面板内容
+        '.hj-btn',                      // 所有脚本按钮
+        '.hj-btn-play',                 // 播放按钮
+        '.hj-btn-download',             // 下载按钮
+        '.hj-btn-ann',                  // 公告按钮
+        '.hj-btn-key',                  // 账户按钮
+        '.hj-modal-overlay',            // 脚本弹窗遮罩
+        '.hj-modal',                    // 脚本弹窗内容
+        '.hj-modal-title',              // 弹窗标题
+        '.hj-modal-content',            // 弹窗内容区
+        '.hj-modal-actions',            // 弹窗操作区
+        '.hj-modal-btn',                // 弹窗按钮
+        '.hj-modal-input',              // 弹窗输入框
+        '#video-player-overlay',        // 视频播放器遮罩
+        '#hls-video',                   // 视频播放器
+        '#hj-update-notification',      // 更新通知
+        '#hj-toast-box',                // Toast提示框
+        '.hj-url-updated'               // URL更新提示样式
+    ];
+
+    // 检查元素是否属于脚本自身组件
+    function isScriptComponent(element) {
+        if (!element || element.nodeType !== 1) return false;
+
+        // 检查class
+        const className = element.className || '';
+        if (typeof className === 'string') {
+            for (let white of scriptWhiteList) {
+                if (white.startsWith('.')) {
+                    const whiteClass = white.substring(1);
+                    if (className.includes(whiteClass)) return true;
+                }
+            }
+        }
+
+        // 检查id
+        const id = element.id || '';
+        if (typeof id === 'string') {
+            for (let white of scriptWhiteList) {
+                if (white.startsWith('#')) {
+                    const whiteId = white.substring(1);
+                    if (id === whiteId) return true;
+                }
+            }
+        }
+
+        // 检查父元素（防止子元素被误杀）
+        let parent = element.parentElement;
+        let depth = 0;
+        while (parent && depth < 5) {
+            const parentClass = parent.className || '';
+            const parentId = parent.id || '';
+            for (let white of scriptWhiteList) {
+                if (white.startsWith('.') && parentClass.includes(white.substring(1))) return true;
+                if (white.startsWith('#') && parentId === white.substring(1)) return true;
+            }
+            parent = parent.parentElement;
+            depth++;
+        }
+
+        return false;
+    }
+
+    // 广告选择器列表
+    const adSelectors = [
+        '.ad', '.ads', '.advertisement', '.advert',
+        '.banner-ad', '.banner_ads', '.google-ad',
+        'ins.adsbygoogle', '.adsbygoogle',
+        '.ad-container', '.ad-wrapper', '.ad-banner',
+        '.advertisement-banner', '.sponsored', '.promoted',
+        '.video-ads', '.video-ad', '.player-ads',
+        '.float-ad', '.floating-ad', '.pop-ad',
+        '.gg-box', '.gg-ad', '.guanggao',
+        // 海角社区特定广告（但不包含hj开头的脚本组件）
+        '[data-ad]', '[data-advertisement]',
+        // 弹窗类广告（排除脚本弹窗）
+        '.modal-ad', '.dialog-ad', '.popup-ad',
+        '.slide-ad', '.sticky-ad', '.fixed-ad',
+        '.interstitial-ad', '.fullscreen-ad'
+    ];
+
+    // 需要移除的DOM节点类型（基于文本内容）
+    const textContentFilters = [
+        /广告|推广|赞助|advertisement|sponsored|promotion/i,
+        /点击购买|立即购买|限时优惠|免费领取/i,
+        /下载APP|扫码下载|手机客户端/i,
+        /联系客服|咨询热线|微信号|QQ群/i
+    ];
+
+    // 存储被移除的广告元素
+    let removedAdsCount = 0;
+
+    // 移除单个广告元素（跳过脚本组件）
+    function removeAdElement(element) {
+        if (!element || !element.parentNode) return false;
+
+        // 重要：如果元素是脚本自身组件，绝对不能移除
+        if (isScriptComponent(element)) {
+            return false;
+        }
+
+        try {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+            element.style.opacity = '0';
+            element.style.height = '0';
+            element.style.overflow = 'hidden';
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+            removedAdsCount++;
+            console.log(`[去广告] 已移除广告元素: ${element.tagName}${element.id ? '#'+element.id : ''}${element.className ? '.'+element.className : ''}`);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    // 检查元素是否匹配广告选择器（同时检查是否为脚本组件）
+    function isAdElement(element) {
+        if (!element || element.nodeType !== 1) return false;
+
+        // 脚本组件绝不被视为广告
+        if (isScriptComponent(element)) return false;
+
+        // 检查选择器匹配
+        for (let selector of adSelectors) {
+            try {
+                if (element.matches && element.matches(selector)) {
+                    return true;
+                }
+            } catch(e) {}
+        }
+
+        // 检查class属性，但跳过hj开头的class，因为脚本组件以hj-开头
+        const className = element.className || '';
+        if (typeof className === 'string') {
+            // 跳过脚本组件的hj-前缀class
+            if (className.includes('hj-')) return false;
+            const lowerClass = className.toLowerCase();
+            if (lowerClass.includes('ad') || lowerClass.includes('ads') ||
+                lowerClass.includes('gg') || lowerClass.includes('guanggao')) {
+                return true;
+            }
+        }
+
+        // 检查id属性，跳过hj开头的id
+        const id = element.id || '';
+        if (typeof id === 'string') {
+            if (id.startsWith('hj')) return false;
+            const lowerId = id.toLowerCase();
+            if (lowerId.includes('ad') || lowerId.includes('ads') ||
+                lowerId.includes('gg') || lowerId.includes('guanggao')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 检查元素的文本内容是否包含广告关键词（跳过脚本组件）
+    function hasAdTextContent(element) {
+        if (!element || element.nodeType !== 1) return false;
+        if (isScriptComponent(element)) return false;
+
+        // 只检查特定类型的元素（避免检查整个body）
+        const tagsToCheck = ['DIV', 'SPAN', 'P', 'A', 'SECTION', 'ARTICLE', 'ASIDE'];
+        if (!tagsToCheck.includes(element.tagName)) return false;
+
+        // 获取纯文本内容（限制长度提高性能）
+        let text = '';
+        try {
+            text = (element.innerText || element.textContent || '').slice(0, 500);
+        } catch(e) {
+            return false;
+        }
+
+        if (!text) return false;
+
+        for (let filter of textContentFilters) {
+            if (filter.test(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 扫描并移除广告
+    function scanAndRemoveAds() {
+        // 限制单次扫描数量，避免性能问题
+        let scanCount = 0;
+        const maxScan = 500;
+
+        // 通过选择器查找
+        for (let selector of adSelectors) {
+            if (scanCount >= maxScan) break;
+            try {
+                const elements = document.querySelectorAll(selector);
+                for (let el of elements) {
+                    if (scanCount >= maxScan) break;
+                    if (el && el.parentNode && !isScriptComponent(el)) {
+                        removeAdElement(el);
+                        scanCount++;
+                    }
+                }
+            } catch(e) {}
+        }
+
+
+    }
+
+    // 移除特定的广告iframe（跳过脚本相关的）
+    function removeAdIframes() {
+        const iframes = document.querySelectorAll('iframe');
+        for (let iframe of iframes) {
+            if (isScriptComponent(iframe)) continue;
+            try {
+                const src = iframe.src || '';
+                const lowerSrc = src.toLowerCase();
+                // 广告相关的iframe源
+                if (lowerSrc.includes('ad') || lowerSrc.includes('ads') ||
+                    lowerSrc.includes('doubleclick') || lowerSrc.includes('googlead') ||
+                    lowerSrc.includes('googlesyndication') || lowerSrc.includes('cpro') ||
+                    lowerSrc.includes('baidu') || lowerSrc.includes('union')) {
+                    removeAdElement(iframe);
+                }
+            } catch(e) {}
+        }
+    }
+
+    // 移除浮动广告，通过position定位，但排除脚本组件
+    function removeFloatingAds() {
+        const allElements = document.querySelectorAll('*');
+        for (let el of allElements) {
+            if (isScriptComponent(el)) continue;
+            try {
+                const style = window.getComputedStyle(el);
+                const position = style.position;
+                const zIndex = parseInt(style.zIndex, 10);
+
+                // 检查是否是浮动广告
+                if ((position === 'fixed' || position === 'absolute') &&
+                    !isNaN(zIndex) && zIndex > 1000) {
+                    // 检查是否可能是广告
+                    const width = parseFloat(style.width);
+                    const height = parseFloat(style.height);
+                    const innerText = (el.innerText || '').toLowerCase();
+
+                    const isAdSize = (width < 300 && height < 300) || (width < 500 && height < 100);
+                    const hasAdText = innerText.includes('广告') || innerText.includes('关闭') ||
+                                     innerText.includes('ad') || innerText.includes('推广');
+
+                    if (isAdSize || hasAdText) {
+                        // 额外检查：如果元素内没有主要内容，则移除
+                        const hasVideo = el.querySelector('video');
+                        const hasPlayer = el.querySelector('[class*="player"]');
+                        if (!hasVideo && !hasPlayer) {
+                            removeAdElement(el);
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+    }
+
+    // 移除网页中常见的固定广告容器（排除脚本组件）
+    function removeCommonAdContainers() {
+        const commonAdContainers = [
+            '#cproIframeHolder', '#cproIframe1', '#cproIframe2',
+            '.cproIframe', '.cpro-container', '.cpro-ad',
+            '.union-container', '.union-ad', '.union-banner',
+            '.ggw', '.ggad', '.ggk', '.gglc',
+            '.ad_wrapper', '.ad_container', '.ad_contain',
+            '#ad_container', '#ad_wrapper', '#ad_contain',
+            '.bottom-ad', '.top-ad', '.left-ad', '.right-ad',
+            '.sidebar-ad', '.content-ad', '.footer-ad', '.header-ad'
+        ];
+
+        for (let selector of commonAdContainers) {
+            try {
+                const elements = document.querySelectorAll(selector);
+                for (let el of elements) {
+                    if (!isScriptComponent(el)) {
+                        removeAdElement(el);
+                    }
+                }
+            } catch(e) {}
+        }
+    }
+
+    // 监听DOM变化，动态移除新添加的广告
+    function observeAdsRemoval() {
+        const observer = new MutationObserver(function(mutations) {
+            let hasNewAds = false;
+
+            for (let mutation of mutations) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    for (let node of mutation.addedNodes) {
+                        if (node.nodeType === 1) { // Element node
+                            // 检查节点本身是否是广告（且不是脚本组件）
+                            if (!isScriptComponent(node) && (isAdElement(node) || hasAdTextContent(node))) {
+                                setTimeout(() => removeAdElement(node), 100);
+                                hasNewAds = true;
+                            }
+                            // 检查节点的子元素
+                            if (node.querySelectorAll && !isScriptComponent(node)) {
+                                const potentialAds = node.querySelectorAll(adSelectors.join(','));
+                                for (let ad of potentialAds) {
+                                    if (!isScriptComponent(ad)) {
+                                        setTimeout(() => removeAdElement(ad), 100);
+                                        hasNewAds = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (hasNewAds) {
+                setTimeout(scanAndRemoveAds, 500);
+            }
+        });
+
+        if (document.body) {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        return observer;
+    }
+
+    // 移除广告占位符和空白区域（排除脚本组件）
+    function removeAdPlaceholders() {
+        const allElements = document.querySelectorAll('[class*="placeholder"], [class*="place-holder"]');
+        for (let el of allElements) {
+            if (isScriptComponent(el)) continue;
+            const text = (el.innerText || '').toLowerCase();
+            if (text.includes('广告') || text.includes('ad') ||
+                (el.clientHeight < 50 && el.clientWidth > 100)) {
+                removeAdElement(el);
+            }
+        }
+    }
+
+    // 防止广告重新加载（劫持部分广告请求）
+    function preventAdRequests() {
+        // 劫持fetch请求中的广告相关URL
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+            const url = typeof input === 'string' ? input : (input && input.url);
+            if (url && typeof url === 'string') {
+                const lowerUrl = url.toLowerCase();
+                // 阻止广告相关请求（但不阻止脚本自身API请求）
+                const adUrlPatterns = [
+                    '/ad', '/ads', '/advert', '/advertisement',
+                    'doubleclick', 'googlesyndication', 'cpro',
+                    'baidu.com/ads', 'union.', '.gg.', 'guanggao'
+                ];
+                for (let pattern of adUrlPatterns) {
+                    if (lowerUrl.includes(pattern)) {
+                        console.log(`[去广告] 已阻止广告请求: ${url}`);
+                        return Promise.reject(new Error('Ad request blocked'));
+                    }
+                }
+            }
+            return originalFetch.apply(this, arguments);
+        };
+    }
+
+    // 清理页面顶部/底部的广告条（排除脚本组件）
+    function cleanupTopBottomAds() {
+        const topElements = document.querySelectorAll('header, .header, #header, .top, #top, .navbar, .nav');
+        for (let el of topElements) {
+            if (isScriptComponent(el)) continue;
+            const innerText = (el.innerText || '').toLowerCase();
+            if (innerText.includes('广告') && innerText.includes('关闭')) {
+                removeAdElement(el);
+            }
+        }
+
+        const bottomElements = document.querySelectorAll('footer, .footer, #footer, .bottom, #bottom');
+        for (let el of bottomElements) {
+            if (isScriptComponent(el)) continue;
+            const innerText = (el.innerText || '').toLowerCase();
+            if (innerText.includes('广告') && (innerText.includes('投放') || innerText.includes('合作'))) {
+                if (el.querySelectorAll('a').length > 3 && el.querySelectorAll('img').length > 2) {
+                    removeAdElement(el);
+                }
+            }
+        }
+    }
+
+    // 初始化去广告功能
+    function initAdBlocker() {
+        setTimeout(() => {
+            scanAndRemoveAds();
+            removeAdIframes();
+            removeCommonAdContainers();
+            removeAdPlaceholders();
+            removeFloatingAds();
+            cleanupTopBottomAds();
+        }, 500);
+
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                scanAndRemoveAds();
+                removeAdIframes();
+                removeFloatingAds();
+                cleanupTopBottomAds();
+            }, 1000);
+        });
+
+        // 等待DOM准备就绪后开始监听
+        if (document.body) {
+            observeAdsRemoval();
+        } else {
+            document.addEventListener('DOMContentLoaded', () => {
+                observeAdsRemoval();
+            });
+        }
+
+        try {
+            preventAdRequests();
+        } catch(e) {}
+
+        setInterval(() => {
+            if (document.body) {
+                scanAndRemoveAds();
+                removeAdIframes();
+                removeFloatingAds();
+            }
+        }, 10000);
+    }
+
+    // 页面加载完成后启动
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAdBlocker);
+    } else {
+        initAdBlocker();
+    }
 
 })();
