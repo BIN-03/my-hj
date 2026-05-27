@@ -1194,17 +1194,15 @@ checkForUpdate();
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
                         </button>
-                        <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <path d="M3 5h18M3 12h18M3 19h18"/>
-                            </svg>
-                        </button>
-                        <button class="hj-btn hj-btn-key" id="hj-btn-key" title="账户中心">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                            </svg>
-                        </button>
+                       <button class="hj-btn hj-btn-ann"        id="hj-btn-ann" title="查看公告">
+                           <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png"  style="width: 28px; height: 28px; border-radius:  6px;">
+</button>
+                         <button class="hj-btn hj-btn-key" id="hj-btn-key" title="会员中心">
+                              <svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5">
+                                    <path d="M10 10c1.84 0 3.33-1.49 3.33-3.33S11.84 3.33 10 3.33 6.67 4.82 6.67 6.67 8.16 10 10
+                                                    10zm0 1.67c-2.22 0-6.67 1.12-6.67 3.33v1.67h13.34V15c0-2.21-4.45-3.33-6.67-3.33z"/>
+                              </svg>
+                      </button>
                     </div>
                 </div>
             </div>
@@ -1327,15 +1325,15 @@ checkForUpdate();
         modal.style.zIndex = '1000005';
         modal.innerHTML = `
             <div class="hj-modal" style="max-height: 80vh; display:flex; flex-direction:column;">
-                <div class="hj-modal-title">🔐 账户中心</div>
+                <div class="hj-modal-title">🔐 会员中心</div>
                 <div class="hj-modal-content" style="overflow:auto;">
                     <div class="hj-modal-row">
                         <span class="hj-modal-label">状态</span>
-                        <span class="hj-modal-value">✅ 正式版</span>
+                        <span class="hj-modal-value">✅ 会员生效中···</span>
                     </div>
                     <div class="hj-modal-row">
-                        <span class="hj-modal-label">VIP 到期</span>
-                        <span class="hj-modal-value">长期</span>
+                        <span class="hj-modal-label">V I P </span>
+                        <span class="hj-modal-value">💎长期</span>
                     </div>
                 </div>
                 <div class="hj-modal-actions" style="flex-direction: column;">
