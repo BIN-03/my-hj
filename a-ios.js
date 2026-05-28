@@ -1,10 +1,9 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.7
+// @version      1.1.8
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石/站内广告（pc端），直接使用。⚡
 // @author      作者703860120
 // ==/UserScript==
-(function() {
 'use strict';
 let currentPlayingUrl = null;  
 // 版本更新检测
@@ -90,90 +89,7 @@ function showUpdateNotification(newVersion) {
         width: 240px;
     `;
 
-    notification.innerHTML = `
-        <div style="text-align:center;">
-            <div style="font-size:18px;font-weight:600;margin-bottom:6px;">发现新版本</div>
-            <div style="font-size:12px;font-weight:300;margin-bottom:6px;color:yellow">Tips:安卓用户重新在脚本页面添加一次链接即可</div>
-            <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
-        </div>
-        <div style="display:flex;gap:10px;width:100%;">
-            <button id="hj-close-btn" style="
-                background:rgba(255,255,255,0.15);
-                border:none;
-                color:white;
-                padding:10px 0;
-                border-radius:8px;
-                cursor:pointer;
-                font-size:14px;
-                flex:1;
-            ">关闭</button>
-            <button id="hj-update-now-btn" style="
-                background:#4facfe;
-                border:none;
-                color:white;
-                padding:10px 0;
-                border-radius:8px;
-                cursor:pointer;
-                font-size:14px;
-                flex:1;
-            ">立即更新</button>
-        </div>
-    `;
-    document.body.appendChild(notification);
-    document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
-        window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
-        notification.remove();
-        alert('安装后请重新打开浏览器生效');
-    });
-    document.getElementById('hj-close-btn')?.addEventListener('click', () => {
-        notification.remove();
-    });
-    
-    setTimeout(() => {
-        if (notification && notification.remove) notification.remove();
-    }, 8000);
-}
-
-// 检查更新
-async function checkForUpdate() {
-    try {
-        const latestVersion = await getLatestVersionFromGitHub();
-        if (latestVersion && latestVersion !== SCRIPT_VERSION) {
-            showUpdateNotification(latestVersion);
-            return true;
-        }
-        return false;
-    } catch (e) {
-        return false;
-    }
-}
-
-// 检查本地版本变化（增加 GM_deleteValue 的容错）
-function checkLocalVersionUpdate() {
-    try { GM_deleteValue('last_run_version'); } catch(e) { /* 兼容不支持的环境 */ }
-    const lastVersion = GM_getValue('last_run_version', '');
-    if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
-    }
-    GM_setValue('last_run_version', SCRIPT_VERSION);
-}
-checkLocalVersionUpdate();
-checkForUpdate();
-    
-    // 使用 GM_xmlhttpRequest 封装
-    function gmRequest(url, opts={}) {
-        const method = (opts.method||'GET').toUpperCase();
-        const headers = Object.assign({}, opts.headers||{});
-        const data = (opts.body!==undefined && opts.body!==null) ? String(opts.body) : null;
-        return new Promise((resolve)=>{
-            GM_xmlhttpRequest({
-                method,
-                url,
-                headers,
-                data,
-                onload: (res)=>{
-                    const ok = res.status>=200 && res.status<300;
-                    const status = res.status;
+    nus;
                     const text = res.responseText||'';
                     let cachedJsonParsed = null;
                     const resp = {
