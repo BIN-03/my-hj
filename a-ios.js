@@ -1,22 +1,8 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.6
+// @version      1.1.7
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石/站内广告（pc端），直接使用。⚡
 // @author      作者703860120
-// @icon        https://www.haijiao.com/images/common/project/loading.gif
-// @include      *://hj*.*/*
-// @match        https://haijiao.com/*
-// @match        https://*.haijiao.com/*
-// @match        https://hj251101e0b.top/*
-// @run-at       document-start
-// @grant        unsafeWindow
-// @grant        GM_addStyle
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_deleteValue
-// @grant        GM_info
-// @grant        GM_xmlhttpRequest
-// @license      MIT
 // ==/UserScript==
 (function() {
 'use strict';
