@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.7
+// @version      1.1.8
 // @description  ⚡支持观看及下载视频，已移除付费金币/钻石/站内广告（pc端），直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -329,7 +329,6 @@ checkForUpdate();
             </div>
             <div class="hj-modal-actions" style="display: flex; gap: 12px; justify-content: center;">
                 <button class="hj-modal-btn" id="hj-ann-close" style="flex:1; background: rgba(255,255,255,0.2);">关闭</button>
-                <button class="hj-modal-btn" id="hj-qq-group-btn" style="flex:1; background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%);">🐧 前往防失联</button>
             </div>
         </div>`;
 
@@ -346,10 +345,6 @@ checkForUpdate();
         });
 
         document.getElementById('hj-ann-close')?.addEventListener('click', closeAll);
-        document.getElementById('hj-qq-group-btn')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            window.open('https://qm.qq.com/cgi-bin/qm/qr?k=BBh2_32dpkw0DDb3PJRnP1J-pPW96Lhv&jump_from=webapi&authKey=n0jSy+OWeCJWtRl8kE05d6hGoZzRropB0QpoInmoALz1WIpg+0L22Uu48OD9KbPM', '_blank');
-        });
 
         GM_xmlhttpRequest({
             method: 'GET',
@@ -864,6 +859,11 @@ checkForUpdate();
         }
     }
 
+    // QQ群跳转按钮处理函数
+    function handleQQGroup() {
+        window.open('https://qm.qq.com/cgi-bin/qm/qr?k=BBh2_32dpkw0DDb3PJRnP1J-pPW96Lhv&jump_from=webapi&authKey=n0jSy+OWeCJWtRl8kE05d6hGoZzRropB0QpoInmoALz1WIpg+0L22Uu48OD9KbPM', '_blank');
+    }
+
     function attachStrictHandlers(){
         try{
             attachPlayHandler();
@@ -1003,7 +1003,7 @@ checkForUpdate();
                 window.scrollTo({ top: Math.max(0, oldY + 200), behavior: 'auto' });
             }
             const evs = ['scroll','resize','mousemove','pointermove'];
-            evs.forEach(type=>{ try{ window.dispatchEvent(new Event(type)); }catch(_){} });
+            evs.forEach(type=>{ try{ window.dispatchEvent(new Event(type)); }catch(_){ } });
             if (el){
                 try{
                     const rect = el.getBoundingClientRect();
@@ -1012,7 +1012,7 @@ checkForUpdate();
                     el.dispatchEvent(new MouseEvent('mouseover', opts));
                 }catch(_){}
             }
-            setTimeout(()=>{ try{ window.scrollTo({ top: oldY, behavior: 'auto' }); }catch(_){} }, 400);
+            setTimeout(()=>{ try{ window.scrollTo({ top: oldY, behavior: 'auto' }); }catch(_){ } }, 400);
         }catch(_){}
     }
 
@@ -1151,7 +1151,7 @@ checkForUpdate();
             @keyframes statusPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
             .hj-btn-play { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
             .hj-btn-download { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-            .hj-btn-key { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
+            .hj-btn-qq { background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%); }
             .hj-btn-ann { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%) !important; }
             .hj-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 999998; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1194,15 +1194,12 @@ checkForUpdate();
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
                         </button>
-                       <button class="hj-btn hj-btn-ann"        id="hj-btn-ann" title="查看公告">
-                           <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png"  style="width: 28px; height: 28px; border-radius:  6px;">
+                        <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
+                            <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png" style="width: 28px; height: 28px; border-radius: 6px;">
+                        </button>
+                        <button class="hj-btn hj-btn-key" id="hj-btn-qq" title="联系作者">
+    <img src="https://p.qpic.cn/qqconadmin/0/b095d8d0ad144de3943f5dcba95a9624/0"style="width:50px; height:27px";>
 </button>
-                         <button class="hj-btn hj-btn-key" id="hj-btn-key" title="会员中心">
-                              <svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5">
-                                    <path d="M10 10c1.84 0 3.33-1.49 3.33-3.33S11.84 3.33 10 3.33 6.67 4.82 6.67 6.67 8.16 10 10
-                                                    10zm0 1.67c-2.22 0-6.67 1.12-6.67 3.33v1.67h13.34V15c0-2.21-4.45-3.33-6.67-3.33z"/>
-                              </svg>
-                      </button>
                     </div>
                 </div>
             </div>
@@ -1300,7 +1297,7 @@ checkForUpdate();
                 checkForUpdate();
                 return downloadVideo();
             }
-            if (btn.id === 'hj-btn-key') return showAccountModal();
+            if (btn.id === 'hj-btn-qq') return handleQQGroup();
             if (btn.id === 'hj-btn-ann') return showAnnouncementModal();
         }, 300);
         panel.addEventListener('click', onClick);
@@ -1312,40 +1309,6 @@ checkForUpdate();
         const on = isFullReady();
         if (playBtn) playBtn.classList.toggle('hj-btn-ready', on);
         if (downloadBtn) downloadBtn.classList.toggle('hj-btn-ready', on);
-    }
-
-    async function showAccountModal() {
-        const existed = document.querySelector('.hj-modal-overlay[data-type="account"]');
-        if (existed){ existed.remove(); accModalOpen = false; setPanelModalMode(false); ensurePanelVisible(); return; }
-        if (accModalOpen) return;
-        accModalOpen = true;
-        const modal = document.createElement('div');
-        modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type','account');
-        modal.style.zIndex = '1000005';
-        modal.innerHTML = `
-            <div class="hj-modal" style="max-height: 80vh; display:flex; flex-direction:column;">
-                <div class="hj-modal-title">🔐 会员中心</div>
-                <div class="hj-modal-content" style="overflow:auto;">
-                    <div class="hj-modal-row">
-                        <span class="hj-modal-label">状态</span>
-                        <span class="hj-modal-value">✅ 会员生效中···</span>
-                    </div>
-                    <div class="hj-modal-row">
-                        <span class="hj-modal-label">V I P </span>
-                        <span class="hj-modal-value">💎长期</span>
-                    </div>
-                </div>
-                <div class="hj-modal-actions" style="flex-direction: column;">
-                    <button class="hj-modal-btn" id="hj-acc-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        setPanelModalMode(true);
-        const closeAll = ()=>{ accModalOpen = false; modal.remove(); setPanelModalMode(false); ensurePanelVisible(); };
-        modal.addEventListener('click', (e)=>{ if(e.target===modal) closeAll(); });
-        const closeBtn = document.getElementById('hj-acc-close'); if (closeBtn) closeBtn.addEventListener('click', closeAll);
     }
 
     async function resolveFullFromServer(payload){
@@ -2027,7 +1990,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
         '.hj-btn-play',                 // 播放按钮
         '.hj-btn-download',             // 下载按钮
         '.hj-btn-ann',                  // 公告按钮
-        '.hj-btn-key',                  // 会员按钮
+        '.hj-btn-qq',                   // QQ群按钮
         '.hj-modal-overlay',            // 脚本弹窗遮罩
         '.hj-modal',                    // 脚本弹窗内容
         '.hj-modal-title',              // 弹窗标题
