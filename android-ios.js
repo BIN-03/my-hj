@@ -29,7 +29,7 @@ function getCurrentVersion() {
     return '1.0.0';
 }
 const SCRIPT_VERSION = getCurrentVersion();
-const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/a-ios.js';
+const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
 
 async function getLatestVersionFromGitHub() {
     try {
