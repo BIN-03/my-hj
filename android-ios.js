@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
 // @version      1.1.8
-// @description  ⚡支持观看及下载视频，已移除付费金币/钻石/站内广告（pc端），直接使用。⚡
+// @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://hj*.*/*
@@ -73,7 +73,7 @@ function showUpdateNotification(newVersion) {
         style.id = 'hj-update-animation-style';
         style.textContent = `
             @keyframes hjUpdateFadeIn {
-                from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
                 to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
             }
         `;
@@ -162,12 +162,70 @@ async function checkForUpdate() {
     }
 }
 
+// 全局Toast - 显示在最外层，不会被弹窗遮挡
+function showGlobalToast(text, isError = false) {
+    try {
+        // 移除已存在的全局Toast
+        const existing = document.getElementById('hj-global-toast');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.id = 'hj-global-toast';
+        toast.textContent = String(text || '');
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${isError ? 'rgba(220, 53, 69, 0.95)' : 'rgba(0, 0, 0, 0.85)'};
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000010;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+            max-width: 90vw;
+            white-space: normal;
+            text-align: center;
+            pointer-events: none;
+            animation: hjToastFadeInOut 2s ease forwards;
+        `;
+        
+        // 添加动画样式（如果不存在）
+        if (!document.getElementById('hj-toast-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'hj-toast-animation-style';
+            style.textContent = `
+                @keyframes hjToastFadeInOut {
+                    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(toast);
+        
+        // 2秒后自动移除
+        setTimeout(() => {
+            if (toast && toast.remove) toast.remove();
+        }, 2000);
+    } catch(e) {}
+}
+
 // 检查本地版本变化（增加 GM_deleteValue 的容错）
 function checkLocalVersionUpdate() {
     try { GM_deleteValue('last_run_version'); } catch(e) { /* 兼容不支持的环境 */ }
     const lastVersion = GM_getValue('last_run_version', '');
     if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-        setTimeout(() => showToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
+        setTimeout(() => showGlobalToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
     }
     GM_setValue('last_run_version', SCRIPT_VERSION);
 }
@@ -232,6 +290,7 @@ checkForUpdate();
         };
     }
 
+    // 保留原有的 showToast 用于其他场景（位置在右上角）
     function showToast(text){
         try{
             let box = document.getElementById('hj-toast-box');
@@ -778,7 +837,7 @@ checkForUpdate();
                             parsingPending = false; updateStrictUi();
                             try{ safeSwitchPlayerSource(u); }catch(_){ }
                         }
-                        try{ if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) showToast('完整版已就绪'); }catch(_){ }
+                        try{ if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) showGlobalToast('完整版已就绪'); }catch(_){ }
                     }
                 })
                 .catch(()=>{})
@@ -834,7 +893,7 @@ checkForUpdate();
                 e.preventDefault();
                 checkForUpdate();
                 if (!isFullReady()) {
-                    showToast('视频还在解析中，请等几秒钟哦~');
+                    showGlobalToast('视频还在解析中，请等几秒钟哦~');
                     return;
                 }
                 playFullVideo();
@@ -851,7 +910,7 @@ checkForUpdate();
                 e.preventDefault();
                 checkForUpdate();
                 if (!isFullReady()) {
-                    showToast('视频还在解析中，请等几秒钟哦~');
+                    showGlobalToast('视频还在解析中，请等几秒钟哦~');
                     return;
                 }
                 downloadVideo();
@@ -886,7 +945,7 @@ checkForUpdate();
                 if (notReady && !isSignatureAligned()){
                     if (!window.__hj_recap_inflight){
                         window.__hj_recap_inflight = true;
-                        showToast('正在为当前页面重新捕获视频地址…');
+                        showGlobalToast('正在为当前页面重新捕获视频地址…');
                         forceRecaptureForCurrentPage(5000).then((ok)=>{
                             try{
                                 if (ok && (isFullReady() || (capturedM3u8Url && sigCaptured===currentSig()))){
@@ -900,11 +959,11 @@ checkForUpdate();
                 if (el.id === 'hj-btn-play'){
                     if (STRICT_MODE && notReady){
                         if (capturedM3u8Url && sigCaptured===currentSig()) { try{ playFullVideo(true); }catch(_){ } return; }
-                        showToast('视频还在解析中，请等几秒钟哦~'); return;
+                        showGlobalToast('视频还在解析中，请等几秒钟哦~'); return;
                     }
                     try{ playFullVideo(); }catch(_){ }
                 } else if (el.id === 'hj-btn-download'){
-                    if (STRICT_MODE && notReady) { showToast('视频还在解析中，请等几秒钟哦~'); return; }
+                    if (STRICT_MODE && notReady) { showGlobalToast('视频还在解析中，请等几秒钟哦~'); return; }
                     try{ downloadVideo(); }catch(_){ }
                 }
             };
@@ -1138,7 +1197,7 @@ checkForUpdate();
             .hj-toggle-btn { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: rgba(102, 126, 234, 0.3); border: none; border-radius: 50%; cursor: move; color: white; transition: none; position: relative; backdrop-filter: blur(10px); margin: 0 auto; }
             .hj-toggle-btn:hover { filter: brightness(1.05); }
             .hj-toggle-btn svg { width: 24px; height: 24px; transition: none; transform: rotate(180deg); }
-            .hj-panel-content { padding: 16px; }
+            .hj-panel-content { padding: 8px; }
             .hj-buttons { display: flex; flex-direction: column; gap: 12px; }
             .hj-btn { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border: none; border-radius: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); }
             .hj-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent); opacity: 0; transition: opacity 0.3s; }
@@ -1151,7 +1210,8 @@ checkForUpdate();
             @keyframes statusPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
             .hj-btn-play { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
             .hj-btn-download { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-            .hj-btn-qq { background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%); }
+            /* QQ按钮单独渐变背景色 */
+            .hj-btn-qq { background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%) !important; }
             .hj-btn-ann { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%) !important; }
             .hj-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 999998; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1197,8 +1257,8 @@ checkForUpdate();
                         <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
                             <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png" style="width: 28px; height: 28px; border-radius: 6px;">
                         </button>
-                        <button class="hj-btn hj-btn-key" id="hj-btn-qq" title="联系作者">
-    <img src="https://p.qpic.cn/qqconadmin/0/b095d8d0ad144de3943f5dcba95a9624/0"style="width:50px; height:27px";>
+                        <button class="hj-btn hj-btn-qq" id="hj-btn-qq" title="联系作者">
+    <img src="https://p.qpic.cn/qqconadmin/0/b095d8d0ad144de3943f5dcba95a9624/0"style="width:50px; height:27px;">
 </button>
                     </div>
                 </div>
@@ -1568,7 +1628,7 @@ async function downloadVideo() {
     if (existingModal) {
         // 滚动到弹窗位置，或只是闪烁一下提示
         existingModal.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-        showToast('📥 下载窗口已打开');
+        showGlobalToast('📥 下载窗口已打开');
         return;
     }
     
@@ -1577,7 +1637,7 @@ async function downloadVideo() {
     // 立即使用当前已有的视频地址显示弹窗（如果有）
     let initialUrl = lastFullUrl || capturedM3u8Url || null;
     if (!initialUrl) {
-        showToast('❌ 未捕获到视频URL，请稍后重试');
+        showGlobalToast('❌ 未捕获到视频URL，请稍后重试');
         downloadOpen = false;
         return;
     }
@@ -1600,7 +1660,7 @@ async function downloadVideo() {
                 if (urlTextarea) {
                     urlTextarea.value = fullUrl;
                     urlTextarea.classList.add('hj-url-updated');
-                    showToast('✨ 已更新为完整版视频链接');
+                    showGlobalToast('✨ 已更新为完整版视频链接');
                 }
                 // 同时更新全局变量
                 lastFullUrl = fullUrl;
@@ -1667,9 +1727,9 @@ function showDownloadModal(displayUrl, isLoading = false) {
             const val = document.getElementById('hj-download-url')?.value || '';
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(val).then(() => {
-                    showToast('✅ 链接已复制');
+                    showGlobalToast('✅ 链接已复制成功');
                 }).catch(() => {
-                    showToast('❌ 复制失败，请手动复制');
+                    showGlobalToast('❌ 复制失败，请手动复制', true);
                 });
             } else {
                 const textarea = document.createElement('textarea');
@@ -1678,7 +1738,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                showToast('✅ 链接已复制');
+                showGlobalToast('✅ 链接已复制');
             }
         });
     }
@@ -1717,7 +1777,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
             const pageAtStart = currentPageUrl;
 
             if (!capturedM3u8Url){
-                showToast('正在定位视频源…');
+                showGlobalToast('正在定位视频源…');
                 const domUrl = findM3u8InDom();
                 if (domUrl) { capturedM3u8Url = domUrl; }
                 await ensurePreviewTriggered(8, 500);
@@ -1729,12 +1789,12 @@ function showDownloadModal(displayUrl, isLoading = false) {
                         else if (waited >= 8000){ clearInterval(t); resolve(); }
                     },300);
                 });
-                if (!capturedM3u8Url || sigCaptured!==currentSig()){ showToast('未捕获到视频地址，请稍后重试'); inFlightPlay = false; return; }
+                if (!capturedM3u8Url || sigCaptured!==currentSig()){ showGlobalToast('未捕获到视频地址，请稍后重试'); inFlightPlay = false; return; }
             }
             const preferred = await ensureFullBeforePlay(6000);
             if (STRICT_MODE && !preferred){
                 if (!(allowPreview && capturedM3u8Url && sigCaptured===currentSig())){
-                    showToast('视频还在解析中，请等几秒钟哦~'); inFlightPlay = false; return;
+                    showGlobalToast('视频还在解析中，请等几秒钟哦~'); inFlightPlay = false; return;
                 }
             }
             if (epochAtStart !== resolveEpoch || pageAtStart !== currentPageUrl) { inFlightPlay = false; return; }
@@ -1794,7 +1854,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
     let currentPageUrl = window.location.href;
     let lastTopicId = (function(){ try{ return getTopicIdFromUrl(); }catch(_){ return null; } })();
 
-    // 新增：自动展开面板的函数
+    // 自动展开面板
     function expandPanelOnTopicPage() {
         const panel = document.querySelector('.hj-floating-panel');
         if (panel && panel.classList && panel.classList.contains('collapsed')) {
@@ -1875,7 +1935,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
     function isTopicPageNow(){
         try{
             const href = window.location.href;
-            return href.includes('/topic/') || href.includes('/post/details') || window.location.hash.includes('/topic/');
+            return href.includes('/topic/') || href.includes('/post/details') || window.location.hash.include('topic/');
         }catch(_){ return false; }
     }
 
@@ -1940,7 +2000,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
                     updateStrictUi();
                     
                     // 进入帖子页面时，自动展开面板
-                    setTimeout(() => expandPanelOnTopicPage(), 600);
+                    setTimeout(() => expandPanelOnTopicPage(), 1000);
                 }
             });
         } else {
@@ -1969,464 +2029,11 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 updateStrictUi();
                 
                 // 进入帖子页面时，自动展开面板
-                setTimeout(() => expandPanelOnTopicPage(), 600);
+                setTimeout(() => expandPanelOnTopicPage(), 1000);
             }
         }
     }
 
     init();
-
-})();
-// 广告功能模块
-(function() {
-    'use strict';
-    // 白名单，脚本自身组件的选择器
-    const scriptWhiteList = [
-        '.hj-floating-panel',           // 脚本悬浮面板
-        '.hj-panel-container',          // 面板容器
-        '.hj-toggle-btn',               // 折叠按钮
-        '.hj-panel-content',            // 面板内容
-        '.hj-btn',                      // 所有脚本按钮
-        '.hj-btn-play',                 // 播放按钮
-        '.hj-btn-download',             // 下载按钮
-        '.hj-btn-ann',                  // 公告按钮
-        '.hj-btn-qq',                   // QQ群按钮
-        '.hj-modal-overlay',            // 脚本弹窗遮罩
-        '.hj-modal',                    // 脚本弹窗内容
-        '.hj-modal-title',              // 弹窗标题
-        '.hj-modal-content',            // 弹窗内容区
-        '.hj-modal-actions',            // 弹窗操作区
-        '.hj-modal-btn',                // 弹窗按钮
-        '.hj-modal-input',              // 弹窗输入框
-        '#video-player-overlay',        // 视频播放器遮罩
-        '#hls-video',                   // 视频播放器
-        '#hj-update-notification',      // 更新通知
-        '#hj-toast-box',                // Toast提示框
-        '.hj-url-updated'               // URL更新提示样式
-    ];
-
-    // 检查元素是否属于脚本自身组件
-    function isScriptComponent(element) {
-        if (!element || element.nodeType !== 1) return false;
-
-        // 检查class
-        const className = element.className || '';
-        if (typeof className === 'string') {
-            for (let white of scriptWhiteList) {
-                if (white.startsWith('.')) {
-                    const whiteClass = white.substring(1);
-                    if (className.includes(whiteClass)) return true;
-                }
-            }
-        }
-
-        // 检查id
-        const id = element.id || '';
-        if (typeof id === 'string') {
-            for (let white of scriptWhiteList) {
-                if (white.startsWith('#')) {
-                    const whiteId = white.substring(1);
-                    if (id === whiteId) return true;
-                }
-            }
-        }
-
-        // 检查父元素（防止子元素被误杀）
-        let parent = element.parentElement;
-        let depth = 0;
-        while (parent && depth < 5) {
-            const parentClass = parent.className || '';
-            const parentId = parent.id || '';
-            for (let white of scriptWhiteList) {
-                if (white.startsWith('.') && parentClass.includes(white.substring(1))) return true;
-                if (white.startsWith('#') && parentId === white.substring(1)) return true;
-            }
-            parent = parent.parentElement;
-            depth++;
-        }
-
-        return false;
-    }
-
-    // 广告选择器列表
-    const adSelectors = [
-        '.ad', '.ads', '.advertisement', '.advert',
-        '.banner-ad', '.banner_ads', '.google-ad',
-        'ins.adsbygoogle', '.adsbygoogle',
-        '.ad-container', '.ad-wrapper', '.ad-banner',
-        '.advertisement-banner', '.sponsored', '.promoted',
-        '.video-ads', '.video-ad', '.player-ads',
-        '.float-ad', '.floating-ad', '.pop-ad',
-        '.gg-box', '.gg-ad', '.guanggao',
-        // 海角社区特定广告（但不包含hj开头的脚本组件）
-        '[data-ad]', '[data-advertisement]',
-        // 弹窗类广告（排除脚本弹窗）
-        '.modal-ad', '.dialog-ad', '.popup-ad',
-        '.slide-ad', '.sticky-ad', '.fixed-ad',
-        '.interstitial-ad', '.fullscreen-ad'
-    ];
-
-    // 需要移除的DOM节点类型（基于文本内容）
-    const textContentFilters = [
-        /广告|推广|赞助|advertisement|sponsored|promotion/i,
-        /点击购买|立即购买|限时优惠|免费领取/i,
-        /下载APP|扫码下载|手机客户端/i,
-        /联系客服|咨询热线|微信号|QQ群/i
-    ];
-
-    // 存储被移除的广告元素
-    let removedAdsCount = 0;
-
-    // 移除单个广告元素（跳过脚本组件）
-    function removeAdElement(element) {
-        if (!element || !element.parentNode) return false;
-
-        // 重要：如果元素是脚本自身组件，绝对不能移除
-        if (isScriptComponent(element)) {
-            return false;
-        }
-
-        try {
-            element.style.display = 'none';
-            element.style.visibility = 'hidden';
-            element.style.opacity = '0';
-            element.style.height = '0';
-            element.style.overflow = 'hidden';
-            if (element.parentNode) {
-                element.parentNode.removeChild(element);
-            }
-            removedAdsCount++;
-            console.log(`[去广告] 已移除广告元素: ${element.tagName}${element.id ? '#'+element.id : ''}${element.className ? '.'+element.className : ''}`);
-            return true;
-        } catch(e) {
-            return false;
-        }
-    }
-
-    // 检查元素是否匹配广告选择器（同时检查是否为脚本组件）
-    function isAdElement(element) {
-        if (!element || element.nodeType !== 1) return false;
-
-        // 脚本组件绝不被视为广告
-        if (isScriptComponent(element)) return false;
-
-        // 检查选择器匹配
-        for (let selector of adSelectors) {
-            try {
-                if (element.matches && element.matches(selector)) {
-                    return true;
-                }
-            } catch(e) {}
-        }
-
-        // 检查class属性，但跳过hj开头的class，因为脚本组件以hj-开头
-        const className = element.className || '';
-        if (typeof className === 'string') {
-            // 跳过脚本组件的hj-前缀class
-            if (className.includes('hj-')) return false;
-            const lowerClass = className.toLowerCase();
-            if (lowerClass.includes('ad') || lowerClass.includes('ads') ||
-                lowerClass.includes('gg') || lowerClass.includes('guanggao')) {
-                return true;
-            }
-        }
-
-        // 检查id属性，跳过hj开头的id
-        const id = element.id || '';
-        if (typeof id === 'string') {
-            if (id.startsWith('hj')) return false;
-            const lowerId = id.toLowerCase();
-            if (lowerId.includes('ad') || lowerId.includes('ads') ||
-                lowerId.includes('gg') || lowerId.includes('guanggao')) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    // 检查元素的文本内容是否包含广告关键词（跳过脚本组件）
-    function hasAdTextContent(element) {
-        if (!element || element.nodeType !== 1) return false;
-        if (isScriptComponent(element)) return false;
-
-        // 只检查特定类型的元素（避免检查整个body）
-        const tagsToCheck = ['DIV', 'SPAN', 'P', 'A', 'SECTION', 'ARTICLE', 'ASIDE'];
-        if (!tagsToCheck.includes(element.tagName)) return false;
-
-        // 获取纯文本内容（限制长度提高性能）
-        let text = '';
-        try {
-            text = (element.innerText || element.textContent || '').slice(0, 500);
-        } catch(e) {
-            return false;
-        }
-
-        if (!text) return false;
-
-        for (let filter of textContentFilters) {
-            if (filter.test(text)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // 扫描并移除广告
-    function scanAndRemoveAds() {
-        // 限制单次扫描数量，避免性能问题
-        let scanCount = 0;
-        const maxScan = 500;
-
-        // 通过选择器查找
-        for (let selector of adSelectors) {
-            if (scanCount >= maxScan) break;
-            try {
-                const elements = document.querySelectorAll(selector);
-                for (let el of elements) {
-                    if (scanCount >= maxScan) break;
-                    if (el && el.parentNode && !isScriptComponent(el)) {
-                        removeAdElement(el);
-                        scanCount++;
-                    }
-                }
-            } catch(e) {}
-        }
-
-
-    }
-
-    // 移除特定的广告iframe（跳过脚本相关的）
-    function removeAdIframes() {
-        const iframes = document.querySelectorAll('iframe');
-        for (let iframe of iframes) {
-            if (isScriptComponent(iframe)) continue;
-            try {
-                const src = iframe.src || '';
-                const lowerSrc = src.toLowerCase();
-                // 广告相关的iframe源
-                if (lowerSrc.includes('ad') || lowerSrc.includes('ads') ||
-                    lowerSrc.includes('doubleclick') || lowerSrc.includes('googlead') ||
-                    lowerSrc.includes('googlesyndication') || lowerSrc.includes('cpro') ||
-                    lowerSrc.includes('baidu') || lowerSrc.includes('union')) {
-                    removeAdElement(iframe);
-                }
-            } catch(e) {}
-        }
-    }
-
-    // 移除浮动广告，通过position定位，但排除脚本组件
-    function removeFloatingAds() {
-        const allElements = document.querySelectorAll('*');
-        for (let el of allElements) {
-            if (isScriptComponent(el)) continue;
-            try {
-                const style = window.getComputedStyle(el);
-                const position = style.position;
-                const zIndex = parseInt(style.zIndex, 10);
-
-                // 检查是否是浮动广告
-                if ((position === 'fixed' || position === 'absolute') &&
-                    !isNaN(zIndex) && zIndex > 1000) {
-                    // 检查是否可能是广告
-                    const width = parseFloat(style.width);
-                    const height = parseFloat(style.height);
-                    const innerText = (el.innerText || '').toLowerCase();
-
-                    const isAdSize = (width < 300 && height < 300) || (width < 500 && height < 100);
-                    const hasAdText = innerText.includes('广告') || innerText.includes('关闭') ||
-                                     innerText.includes('ad') || innerText.includes('推广');
-
-                    if (isAdSize || hasAdText) {
-                        // 额外检查：如果元素内没有主要内容，则移除
-                        const hasVideo = el.querySelector('video');
-                        const hasPlayer = el.querySelector('[class*="player"]');
-                        if (!hasVideo && !hasPlayer) {
-                            removeAdElement(el);
-                        }
-                    }
-                }
-            } catch(e) {}
-        }
-    }
-
-    // 移除网页中常见的固定广告容器（排除脚本组件）
-    function removeCommonAdContainers() {
-        const commonAdContainers = [
-            '#cproIframeHolder', '#cproIframe1', '#cproIframe2',
-            '.cproIframe', '.cpro-container', '.cpro-ad',
-            '.union-container', '.union-ad', '.union-banner',
-            '.ggw', '.ggad', '.ggk', '.gglc',
-            '.ad_wrapper', '.ad_container', '.ad_contain',
-            '#ad_container', '#ad_wrapper', '#ad_contain',
-            '.bottom-ad', '.top-ad', '.left-ad', '.right-ad',
-            '.sidebar-ad', '.content-ad', '.footer-ad', '.header-ad'
-        ];
-
-        for (let selector of commonAdContainers) {
-            try {
-                const elements = document.querySelectorAll(selector);
-                for (let el of elements) {
-                    if (!isScriptComponent(el)) {
-                        removeAdElement(el);
-                    }
-                }
-            } catch(e) {}
-        }
-    }
-
-    // 监听DOM变化，动态移除新添加的广告
-    function observeAdsRemoval() {
-        const observer = new MutationObserver(function(mutations) {
-            let hasNewAds = false;
-
-            for (let mutation of mutations) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    for (let node of mutation.addedNodes) {
-                        if (node.nodeType === 1) { // Element node
-                            // 检查节点本身是否是广告（且不是脚本组件）
-                            if (!isScriptComponent(node) && (isAdElement(node) || hasAdTextContent(node))) {
-                                setTimeout(() => removeAdElement(node), 100);
-                                hasNewAds = true;
-                            }
-                            // 检查节点的子元素
-                            if (node.querySelectorAll && !isScriptComponent(node)) {
-                                const potentialAds = node.querySelectorAll(adSelectors.join(','));
-                                for (let ad of potentialAds) {
-                                    if (!isScriptComponent(ad)) {
-                                        setTimeout(() => removeAdElement(ad), 100);
-                                        hasNewAds = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (hasNewAds) {
-                setTimeout(scanAndRemoveAds, 500);
-            }
-        });
-
-        if (document.body) {
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        return observer;
-    }
-
-    // 移除广告占位符和空白区域（排除脚本组件）
-    function removeAdPlaceholders() {
-        const allElements = document.querySelectorAll('[class*="placeholder"], [class*="place-holder"]');
-        for (let el of allElements) {
-            if (isScriptComponent(el)) continue;
-            const text = (el.innerText || '').toLowerCase();
-            if (text.includes('广告') || text.includes('ad') ||
-                (el.clientHeight < 50 && el.clientWidth > 100)) {
-                removeAdElement(el);
-            }
-        }
-    }
-
-    // 防止广告重新加载（劫持部分广告请求）
-    function preventAdRequests() {
-        // 劫持fetch请求中的广告相关URL
-        const originalFetch = window.fetch;
-        window.fetch = function(input, init) {
-            const url = typeof input === 'string' ? input : (input && input.url);
-            if (url && typeof url === 'string') {
-                const lowerUrl = url.toLowerCase();
-                // 阻止广告相关请求（但不阻止脚本自身API请求）
-                const adUrlPatterns = [
-                    '/ad', '/ads', '/advert', '/advertisement',
-                    'doubleclick', 'googlesyndication', 'cpro',
-                    'baidu.com/ads', 'union.', '.gg.', 'guanggao'
-                ];
-                for (let pattern of adUrlPatterns) {
-                    if (lowerUrl.includes(pattern)) {
-                        console.log(`[去广告] 已阻止广告请求: ${url}`);
-                        return Promise.reject(new Error('Ad request blocked'));
-                    }
-                }
-            }
-            return originalFetch.apply(this, arguments);
-        };
-    }
-
-    // 清理页面顶部/底部的广告条（排除脚本组件）
-    function cleanupTopBottomAds() {
-        const topElements = document.querySelectorAll('header, .header, #header, .top, #top, .navbar, .nav');
-        for (let el of topElements) {
-            if (isScriptComponent(el)) continue;
-            const innerText = (el.innerText || '').toLowerCase();
-            if (innerText.includes('广告') && innerText.includes('关闭')) {
-                removeAdElement(el);
-            }
-        }
-
-        const bottomElements = document.querySelectorAll('footer, .footer, #footer, .bottom, #bottom');
-        for (let el of bottomElements) {
-            if (isScriptComponent(el)) continue;
-            const innerText = (el.innerText || '').toLowerCase();
-            if (innerText.includes('广告') && (innerText.includes('投放') || innerText.includes('合作'))) {
-                if (el.querySelectorAll('a').length > 3 && el.querySelectorAll('img').length > 2) {
-                    removeAdElement(el);
-                }
-            }
-        }
-    }
-
-    // 初始化去广告功能
-    function initAdBlocker() {
-        setTimeout(() => {
-            scanAndRemoveAds();
-            removeAdIframes();
-            removeCommonAdContainers();
-            removeAdPlaceholders();
-            removeFloatingAds();
-            cleanupTopBottomAds();
-        }, 500);
-
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                scanAndRemoveAds();
-                removeAdIframes();
-                removeFloatingAds();
-                cleanupTopBottomAds();
-            }, 1000);
-        });
-
-        // 等待DOM准备就绪后开始监听
-        if (document.body) {
-            observeAdsRemoval();
-        } else {
-            document.addEventListener('DOMContentLoaded', () => {
-                observeAdsRemoval();
-            });
-        }
-
-        try {
-            preventAdRequests();
-        } catch(e) {}
-
-        setInterval(() => {
-            if (document.body) {
-                scanAndRemoveAds();
-                removeAdIframes();
-                removeFloatingAds();
-            }
-        }, 10000);
-    }
-
-    // 页面加载完成后启动
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initAdBlocker);
-    } else {
-        initAdBlocker();
-    }
 
 })();
