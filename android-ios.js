@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.8
-// @description  ⚡支持观看及下载视频，已移除付费金币/钻石/站内广告（pc端），直接使用。⚡
+// @version      1.1.10
+// @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://hj*.*/*
@@ -20,7 +20,7 @@
 // ==/UserScript==
 (function() {
 'use strict';
-let currentPlayingUrl = null;  
+let currentPlayingUrl = null;
 // 版本更新检测
 function getCurrentVersion() {
     if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
@@ -67,7 +67,7 @@ function showUpdateNotification(newVersion) {
     lastNotifyTime = now;
     const existing = document.getElementById('hj-update-notification');
     if (existing) existing.remove();
-    
+
     if (!document.getElementById('hj-update-animation-style')) {
         const style = document.createElement('style');
         style.id = 'hj-update-animation-style';
@@ -79,7 +79,7 @@ function showUpdateNotification(newVersion) {
         `;
         document.head.appendChild(style);
     }
-    
+
     const notification = document.createElement('div');
     notification.id = 'hj-update-notification';
     notification.style.cssText = `
@@ -142,7 +142,7 @@ function showUpdateNotification(newVersion) {
     document.getElementById('hj-close-btn')?.addEventListener('click', () => {
         notification.remove();
     });
-    
+
     setTimeout(() => {
         if (notification && notification.remove) notification.remove();
     }, 8000);
@@ -163,12 +163,12 @@ async function checkForUpdate() {
 }
 
 // 全局Toast - 显示在最外层，不会被弹窗遮挡
-function showGlobalToast(text, isError = false, duration = 2000) {
+function showGlobalToast(text, isError = false) {
     try {
         // 移除已存在的全局Toast
         const existing = document.getElementById('hj-global-toast');
         if (existing) existing.remove();
-        
+
         const toast = document.createElement('div');
         toast.id = 'hj-global-toast';
         toast.textContent = String(text || '');
@@ -195,7 +195,7 @@ function showGlobalToast(text, isError = false, duration = 2000) {
             pointer-events: none;
             animation: hjToastFadeInOut 2s ease forwards;
         `;
-        
+
         // 添加动画样式（如果不存在）
         if (!document.getElementById('hj-toast-animation-style')) {
             const style = document.createElement('style');
@@ -210,13 +210,13 @@ function showGlobalToast(text, isError = false, duration = 2000) {
             `;
             document.head.appendChild(style);
         }
-        
+
         document.body.appendChild(toast);
-        
-        // 指定时间后自动移除
+
+        // 2秒后自动移除
         setTimeout(() => {
             if (toast && toast.remove) toast.remove();
-        }, duration);
+        }, 2000);
     } catch(e) {}
 }
 
@@ -231,7 +231,7 @@ function checkLocalVersionUpdate() {
 }
 checkLocalVersionUpdate();
 checkForUpdate();
-    
+
     // 使用 GM_xmlhttpRequest 封装
     function gmRequest(url, opts={}) {
         const method = (opts.method||'GET').toUpperCase();
@@ -263,12 +263,7 @@ checkForUpdate();
         });
     }
 
-    try{ if (typeof unsafeWindow !== 'undefined'){ unsafeWindow.authStorage = authStorage; unsafeWindow.API_BASE = API_BASE; } }catch(_){ }
 
-    async function apiFetch(path, opts={}) {
-        const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
-        return await gmRequest(API_BASE + path, Object.assign({}, opts, { headers }));
-    }
 
     function escapeHtml(str){
         try{
@@ -429,14 +424,13 @@ checkForUpdate();
             }
         });
     }
-    
+
     async function serviceFetch(path, opts={}) {
         const headers = Object.assign({}, opts.headers || {});
         const method = (opts.method||'GET').toUpperCase();
         if ((method==='POST' || method==='PUT' || method==='PATCH') && !headers['Content-Type']) {
             headers['Content-Type'] = 'application/json';
         }
-        return await gmRequest(SERVICE_BASE + path, Object.assign({}, opts, { headers }));
     }
 
     let currentHlsInstance = null;
@@ -695,7 +689,6 @@ checkForUpdate();
                     }
                 }
             }
-            triggerNativePreview();
         }catch(_){}
         return false;
     }
@@ -938,9 +931,9 @@ checkForUpdate();
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 e.preventDefault();
-                
+
                 checkForUpdate();
-                
+
                 const notReady = !isFullReady();
                 if (notReady && !isSignatureAligned()){
                     if (!window.__hj_recap_inflight){
@@ -1012,16 +1005,6 @@ checkForUpdate();
 
 
 
-    function autoClickExpandButton() {
-        const allElements = document.querySelectorAll('button, a, span, div');
-        allElements.forEach(element => {
-            if (isExpandButton(element) && isElementVisible(element)) {
-                try {
-                    element.click();
-                } catch (e) {}
-            }
-        });
-    }
 
     function fireClickSequence(el){
         try{
@@ -1037,19 +1020,6 @@ checkForUpdate();
         }catch(_){}
     }
 
-    async function ensurePreviewTriggered(maxTries=6, intervalMs=600){
-        for (let i=0;i<maxTries;i++){
-            if (isFullReady() || capturedM3u8Url) return true;
-            lazyViewportWarmup();
-            if (probePreviewFromPreviewBtn()) return true;
-            try{ triggerSiteSpecificPreview(); }catch(_){}
-            try{ triggerPreviewButtonClick(); }catch(_){}
-            triggerNativePreview();
-            await new Promise(r=>setTimeout(r, intervalMs));
-            if (isFullReady() || capturedM3u8Url) return true;
-        }
-        return isFullReady() || !!capturedM3u8Url;
-    }
 
     function lazyViewportWarmup(){
         try{
@@ -1087,7 +1057,6 @@ checkForUpdate();
             if (domUrl) { capturedM3u8Url = domUrl; return; }
             try{ triggerSiteSpecificPreview(); }catch(_){}
             try{ triggerPreviewButtonClick(); }catch(_){}
-            triggerNativePreview();
             if (!window.__hj_warmup_stop) setTimeout(runner, intervalMs);
         };
         setTimeout(runner, 400);
@@ -1113,6 +1082,70 @@ checkForUpdate();
         }catch(_){ return false; }
     }
 
+       function isExpandButton(element) {
+        if (!element || !element.tagName) return false;
+
+        const tagName = element.tagName.toLowerCase();
+        const text = element.textContent || element.innerText || '';
+        const className = element.className || '';
+        const id = element.id || '';
+
+        const expandTexts = [
+            '展开', '显示更多', '查看更多', '阅读更多', '点击展开', '展开全文', '全文',
+            'more', 'expand', 'show more', 'read more', 'show all'
+        ];
+        const hasExpandText = expandTexts.some(expandText =>
+            text.toLowerCase().includes(expandText.toLowerCase())
+        );
+
+        const expandClassIds = [
+            'expand', 'more', 'show-more', 'read-more', 'unfold',
+            'sell-btn', '展开', 'btn-more', 'btn-expand'
+        ];
+        const hasExpandClass = expandClassIds.some(expandClass =>
+            className.toLowerCase().includes(expandClass.toLowerCase()) ||
+            id.toLowerCase().includes(expandClass.toLowerCase())
+        );
+
+        const expandSelectors = [
+            '[class*="expand"]',
+            '[class*="more"]',
+            '[class*="unfold"]',
+            '[class*="sell-btn"]',
+            '.show-more',
+            '.read-more',
+            '.expand-all',
+            '.btn-more',
+            '.btn-expand'
+        ];
+
+        const matchesSelector = expandSelectors.some(selector => {
+            try {
+                return element.matches(selector);
+            } catch (e) {
+                return false;
+            }
+        });
+
+        return hasExpandText || hasExpandClass || matchesSelector;
+    }
+   function autoClickExpandButton() {
+        const allElements = document.querySelectorAll('button, a, span, div');
+        let clickedCount = 0;
+
+        allElements.forEach(element => {
+            if (isExpandButton(element) && isElementVisible(element)) {
+                try {
+                    element.click();
+                    clickedCount++;
+                } catch (e) {
+                    // Silent error
+                }
+            }
+        });
+
+        return clickedCount;
+    }
     function setupAutoExpandObserver() {
         if (expandObserverSingleton) return expandObserverSingleton;
         let debounceTimer = null;
@@ -1190,11 +1223,10 @@ checkForUpdate();
             #wt-resources-box { position: relative; border: 1px dashed #ec8181; background: #fff4f4; }
             #wt-resources-box::after { content: '请使用屏幕右边插件悬浮播放按钮播放'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: red; font-size: 18px; text-shadow: 1px 1px 0px; text-align: center; width: 80%; }
             .sell-btn { border: none !important; margin-top: 20px; }
-            .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.7); transform-origin: right center; }
+            .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.6); transform-origin: right center; }
             .hj-floating-panel.dragging { transition: none; }
             .hj-floating-panel.collapsed .hj-panel-content { display: none; }
-.hj-floating-panel.collapsed .hj-panel-container { background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-            .hj-panel-container { background: rgba(102, 126, 234, 0.15); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15) inset; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+            .hj-panel-container { background: rgba(102, 126, 234, 0.15); border-radius: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15) inset; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
             .hj-toggle-btn { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: rgba(102, 126, 234, 0.3); border: none; border-radius: 50%; cursor: move; color: white; transition: none; position: relative; backdrop-filter: blur(10px); margin: 0 auto; }
             .hj-toggle-btn:hover { filter: brightness(1.05); }
             .hj-toggle-btn svg { width: 24px; height: 24px; transition: none; transform: rotate(180deg); }
@@ -1268,14 +1300,14 @@ checkForUpdate();
 
         document.body.appendChild(panel);
         setupPanelEvents(panel);
-        
+
         attachPlayHandler();
         attachDownloadHandler();
 
         if (capturedM3u8Url) { updatePlayButton(); }
         uiCreated = true;
         const panelEl = document.querySelector('.hj-floating-panel');
-        const rebind = ()=>{ 
+        const rebind = ()=>{
             if (panelEl && panelEl.dataset.bound !== '1') setupPanelEvents(panelEl);
             attachPlayHandler();
             attachDownloadHandler();
@@ -1621,20 +1653,20 @@ checkForUpdate();
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
-
 // 下载弹窗
 async function downloadVideo() {
     checkForUpdate();
     // 如果弹窗已经打开，就聚焦
     const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
     if (existingModal) {
+        // 滚动到弹窗位置，或只是闪烁一下提示
         existingModal.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
         showGlobalToast('📥 下载窗口已打开');
         return;
     }
-    
+
     downloadOpen = true;
-    
+
     // 立即使用当前已有的视频地址显示弹窗（如果有）
     let initialUrl = lastFullUrl || capturedM3u8Url || null;
     if (!initialUrl) {
@@ -1642,18 +1674,18 @@ async function downloadVideo() {
         downloadOpen = false;
         return;
     }
-    
+
     // 立即显示弹窗，避免等待网络请求
-    showDownloadModal(initialUrl, true);  // 第二个参数表示"正在后台获取完整版"
-    
+    showDownloadModal(initialUrl, true);  // 第二个参数表示“正在后台获取完整版”
+
     // 后台异步尝试获取完整版链接（如果有预览版且尚未拿到完整版）
     if (initialUrl && !isFullReady()) {
         try {
             const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
-            const fullUrl = await resolveFullFromServer({ 
-                pageUrl: location.href, 
-                previewM3u8Url: capturedM3u8Url, 
-                tsSamples: tsSample 
+            const fullUrl = await resolveFullFromServer({
+                pageUrl: location.href,
+                previewM3u8Url: capturedM3u8Url,
+                tsSamples: tsSample
             });
             if (fullUrl && fullUrl !== initialUrl) {
                 // 更新弹窗中的 URL
@@ -1679,14 +1711,14 @@ function showDownloadModal(displayUrl, isLoading = false) {
     // 如果已存在则直接返回
     const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
     if (existingModal) return;
-    
+
     const modal = document.createElement('div');
     modal.className = 'hj-modal-overlay';
     modal.setAttribute('data-type', 'download');
     modal.style.zIndex = '1000005';
-    
+
     const loadingHint = isLoading ? '<div style="font-size:12px; margin-top:6px; color: #ffd966;">⏳ 后台正在获取完整版链接，会自动更新...</div>' : '';
-    
+
     modal.innerHTML = `
         <div class="hj-modal" style="max-width: 600px;">
             <div class="hj-modal-title">📥 视频下载</div>
@@ -1699,19 +1731,16 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 </div>
                 <textarea id="hj-download-url" readonly style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:12px;font-family:'Courier New',monospace;resize:vertical;word-break:break-all;outline:none;">${escapeHtml(String(displayUrl || ''))}</textarea>
                 ${loadingHint}
-                <div style="margin-top: 12px; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 12px; color: #ffd966;">
-                    ⚡ 点击下方按钮后自动跳转并创建下载任务
-                </div>
             </div>
             <div class="hj-modal-actions" style="flex-direction:column;gap:10px;">
-                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-auto" style="width:100%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🎬 一键下载（自动跳转创建任务）</button>
-                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 仅复制链接</button>
+                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 复制链接</button>
+                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-go" style="width:100%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🚀 复制并前往下载</button>
                 <button class="hj-modal-btn" id="hj-download-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
             </div>
         </div>`;
-    
+
     document.body.appendChild(modal);
-    
+
     const closeModal = () => {
         if (modal && modal.remove) {
             modal.remove();
@@ -1720,36 +1749,11 @@ function showDownloadModal(displayUrl, isLoading = false) {
         setPanelModalMode(false);
         ensurePanelVisible();
     };
-    
-    modal.addEventListener('click', (e) => { 
-        if (e.target === modal) closeModal(); 
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
     });
-    
-    // 一键下载按钮 - 修复乱码问题：直接拼接 source 参数，不对链接做二次编码
-    const autoBtn = document.getElementById('hj-download-auto');
-    if (autoBtn) {
-        autoBtn.addEventListener('click', () => {
-            const val = document.getElementById('hj-download-url')?.value || '';
-            if (!val) {
-                showGlobalToast('❌ 没有可下载的链接', true);
-                return;
-            }
-            
-            showGlobalToast('🚀 正在打开下载器，请稍候...');
-            
-            // ✅ 关键修复：直接使用 source 参数拼接，不对 val 做 encodeURIComponent
-            // 这样 getm3u8.com 才能正确识别链接并自动创建下载任务
-            const downloadUrl = 'https://getm3u8.com/?source=' + val;
-            window.open(downloadUrl, '_blank');
-            
-            // 关闭当前弹窗
-            setTimeout(() => {
-                closeModal();
-            }, 500);
-        });
-    }
-    
-    // 仅复制链接按钮（保留原有功能）
+
     const copyBtn = document.getElementById('hj-download-copy');
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
@@ -1771,15 +1775,34 @@ function showDownloadModal(displayUrl, isLoading = false) {
             }
         });
     }
-    
+
+    const goBtn = document.getElementById('hj-download-go');
+    if (goBtn) {
+        goBtn.addEventListener('click', () => {
+            const val = document.getElementById('hj-download-url')?.value || '';
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(val).catch(() => {});
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = val;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            window.open('https://getm3u8.com/?source=' + val, '_blank');
+            closeModal();
+        });
+    }
+
     const closeBtn = document.getElementById('hj-download-close');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    
+
     setPanelModalMode(true);
 }
     async function playFullVideo(allowPreview=false){
         checkForUpdate();
-        
+
         if (inFlightPlay) return;
         inFlightPlay = true;
         try{
@@ -1902,7 +1925,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
         if (isTopic) {
             startPreviewWarmup();
             // 延迟执行自动展开，确保DOM已渲染
-            setTimeout(() => expandPanelOnTopicPage(), 500);
+            setTimeout(() => expandPanelOnTopicPage(), 5000);
         }
         if (isTopic) setTimeout(()=>{ try{ startBackgroundResolve(); }catch(_){ } }, 1200);
         if (isTopic) startResolveWatchdog();
@@ -2008,9 +2031,9 @@ function showDownloadModal(displayUrl, isLoading = false) {
                     startResolveWatchdog();
                     setTimeout(()=>lazyViewportWarmup(), 800);
                     updateStrictUi();
-                    
+
                     // 进入帖子页面时，自动展开面板
-                    setTimeout(() => expandPanelOnTopicPage(), 1000);
+                    setTimeout(() => expandPanelOnTopicPage(), 5000);
                 }
             });
         } else {
@@ -2037,9 +2060,9 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 startPreviewWarmup();
                 setTimeout(()=>lazyViewportWarmup(), 800);
                 updateStrictUi();
-                
+
                 // 进入帖子页面时，自动展开面板
-                setTimeout(() => expandPanelOnTopicPage(), 1000);
+                setTimeout(() => expandPanelOnTopicPage(), 5000);
             }
         }
     }
