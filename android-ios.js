@@ -1223,7 +1223,7 @@ checkForUpdate();
             #wt-resources-box { position: relative; border: 1px dashed #ec8181; background: #fff4f4; }
             #wt-resources-box::after { content: '请使用屏幕右边插件悬浮播放按钮播放'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: red; font-size: 18px; text-shadow: 1px 1px 0px; text-align: center; width: 80%; }
             .sell-btn { border: none !important; margin-top: 20px; }
-            .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.6); transform-origin: right center; }
+            .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.7); transform-origin: right center; }
             .hj-floating-panel.dragging { transition: none; }
             .hj-floating-panel.collapsed .hj-panel-content { display: none; }
             .hj-panel-container { background: rgba(102, 126, 234, 0.15); border-radius: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15) inset; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
