@@ -1193,11 +1193,12 @@ checkForUpdate();
             .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.7); transform-origin: right center; }
             .hj-floating-panel.dragging { transition: none; }
             .hj-floating-panel.collapsed .hj-panel-content { display: none; }
+.hj-floating-panel.collapsed .hj-panel-container { background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
             .hj-panel-container { background: rgba(102, 126, 234, 0.15); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15) inset; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
             .hj-toggle-btn { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: rgba(102, 126, 234, 0.3); border: none; border-radius: 50%; cursor: move; color: white; transition: none; position: relative; backdrop-filter: blur(10px); margin: 0 auto; }
             .hj-toggle-btn:hover { filter: brightness(1.05); }
             .hj-toggle-btn svg { width: 24px; height: 24px; transition: none; transform: rotate(180deg); }
-            .hj-panel-content { padding: 8px; }
+            .hj-panel-content { padding: 10px; }
             .hj-buttons { display: flex; flex-direction: column; gap: 12px; }
             .hj-btn { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border: none; border-radius: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); }
             .hj-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent); opacity: 0; transition: opacity 0.3s; }
