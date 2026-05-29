@@ -101,13 +101,13 @@ function showUpdateNotification(newVersion) {
         font-family: sans-serif;
         animation: hjUpdateFadeIn 0.3s ease;
         border: 1px solid rgba(255,255,255,0.2);
-        width: 240px;
+        width: 280px;
     `;
 
     notification.innerHTML = `
         <div style="text-align:center;">
             <div style="font-size:18px;font-weight:600;margin-bottom:6px;">发现新版本</div>
-            <div style="font-size:12px;font-weight:300;margin-bottom:6px;color:yellow">Tips:安卓用户重新在脚本页面添加一次链接即可</div>
+            <div style="font-size:12px;font-weight:500;margin-bottom:6px;color:yellow">Tips:点击“立即更新”后如没有自动安装新版本，请将“更新页面”地址栏的链接复制去脚本页面粘贴下载即可</div>
             <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
         </div>
         <div style="display:flex;gap:10px;width:100%;">
@@ -145,7 +145,7 @@ function showUpdateNotification(newVersion) {
 
     setTimeout(() => {
         if (notification && notification.remove) notification.remove();
-    }, 8000);
+    }, 15000);
 }
 
 // 检查更新
