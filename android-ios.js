@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
 // @version      1.1.8
-// @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
+// @description  ⚡支持观看及下载视频，已移除付费金币/钻石/站内广告（pc端），直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://hj*.*/*
@@ -163,7 +163,7 @@ async function checkForUpdate() {
 }
 
 // 全局Toast - 显示在最外层，不会被弹窗遮挡
-function showGlobalToast(text, isError = false) {
+function showGlobalToast(text, isError = false, duration = 2000) {
     try {
         // 移除已存在的全局Toast
         const existing = document.getElementById('hj-global-toast');
@@ -213,10 +213,10 @@ function showGlobalToast(text, isError = false) {
         
         document.body.appendChild(toast);
         
-        // 2秒后自动移除
+        // 指定时间后自动移除
         setTimeout(() => {
             if (toast && toast.remove) toast.remove();
-        }, 2000);
+        }, duration);
     } catch(e) {}
 }
 
@@ -1620,13 +1620,13 @@ checkForUpdate();
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
+
 // 下载弹窗
 async function downloadVideo() {
     checkForUpdate();
     // 如果弹窗已经打开，就聚焦
     const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
     if (existingModal) {
-        // 滚动到弹窗位置，或只是闪烁一下提示
         existingModal.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
         showGlobalToast('📥 下载窗口已打开');
         return;
@@ -1643,7 +1643,7 @@ async function downloadVideo() {
     }
     
     // 立即显示弹窗，避免等待网络请求
-    showDownloadModal(initialUrl, true);  // 第二个参数表示“正在后台获取完整版”
+    showDownloadModal(initialUrl, true);  // 第二个参数表示"正在后台获取完整版"
     
     // 后台异步尝试获取完整版链接（如果有预览版且尚未拿到完整版）
     if (initialUrl && !isFullReady()) {
@@ -1698,10 +1698,13 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 </div>
                 <textarea id="hj-download-url" readonly style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:12px;font-family:'Courier New',monospace;resize:vertical;word-break:break-all;outline:none;">${escapeHtml(String(displayUrl || ''))}</textarea>
                 ${loadingHint}
+                <div style="margin-top: 12px; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 12px; color: #ffd966;">
+                    ⚡ 点击下方按钮后自动跳转并创建下载任务
+                </div>
             </div>
             <div class="hj-modal-actions" style="flex-direction:column;gap:10px;">
-                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 复制链接</button>
-                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-go" style="width:100%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🚀 复制并前往下载</button>
+                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-auto" style="width:100%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🎬 一键下载（自动跳转创建任务）</button>
+                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 仅复制链接</button>
                 <button class="hj-modal-btn" id="hj-download-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
             </div>
         </div>`;
@@ -1721,6 +1724,31 @@ function showDownloadModal(displayUrl, isLoading = false) {
         if (e.target === modal) closeModal(); 
     });
     
+    // 一键下载按钮 - 修复乱码问题：直接拼接 source 参数，不对链接做二次编码
+    const autoBtn = document.getElementById('hj-download-auto');
+    if (autoBtn) {
+        autoBtn.addEventListener('click', () => {
+            const val = document.getElementById('hj-download-url')?.value || '';
+            if (!val) {
+                showGlobalToast('❌ 没有可下载的链接', true);
+                return;
+            }
+            
+            showGlobalToast('🚀 正在打开下载器，请稍候...');
+            
+            // ✅ 关键修复：直接使用 source 参数拼接，不对 val 做 encodeURIComponent
+            // 这样 getm3u8.com 才能正确识别链接并自动创建下载任务
+            const downloadUrl = 'https://getm3u8.com/?source=' + val;
+            window.open(downloadUrl, '_blank');
+            
+            // 关闭当前弹窗
+            setTimeout(() => {
+                closeModal();
+            }, 500);
+        });
+    }
+    
+    // 仅复制链接按钮（保留原有功能）
     const copyBtn = document.getElementById('hj-download-copy');
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
@@ -1740,25 +1768,6 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 document.body.removeChild(textarea);
                 showGlobalToast('✅ 链接已复制');
             }
-        });
-    }
-    
-    const goBtn = document.getElementById('hj-download-go');
-    if (goBtn) {
-        goBtn.addEventListener('click', () => {
-            const val = document.getElementById('hj-download-url')?.value || '';
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(val).catch(() => {});
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = val;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-            }
-            window.open('https://getm3u8.com?url=' + encodeURIComponent(val), '_blank');
-            closeModal();
         });
     }
     
