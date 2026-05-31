@@ -101,16 +101,35 @@ function showUpdateNotification(newVersion) {
         font-family: sans-serif;
         animation: hjUpdateFadeIn 0.3s ease;
         border: 1px solid rgba(255,255,255,0.2);
-        width: 280px;
+        width: 240px;
     `;
 
     notification.innerHTML = `
         <div style="text-align:center;">
             <div style="font-size:18px;font-weight:600;margin-bottom:6px;">发现新版本</div>
-            <div style="font-size:12px;font-weight:500;margin-bottom:6px;color:yellow">Tips:点击“立即更新”后如没有自动安装新版本，请将“更新页面”地址栏的链接复制去脚本页面粘贴下载即可</div>
             <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
         </div>
-        <div style="display:flex;gap:10px;width:100%;">
+        <div style="display:flex;gap:10px;width:100%;flex-wrap:wrap;">
+            <button id="hj-copy-update-btn" style="
+                background:#4facfe;
+                border:none;
+                color:white;
+                padding:10px 0;
+                border-radius:8px;
+                cursor:pointer;
+                font-size:14px;
+                flex:1;
+            ">复制更新链接</button>
+            <button id="hj-update-now-btn" style="
+                background:#43e97b;
+                border:none;
+                color:white;
+                padding:10px 0;
+                border-radius:8px;
+                cursor:pointer;
+                font-size:14px;
+                flex:1;
+            ">立即更新</button>
             <button id="hj-close-btn" style="
                 background:rgba(255,255,255,0.15);
                 border:none;
@@ -121,24 +140,97 @@ function showUpdateNotification(newVersion) {
                 font-size:14px;
                 flex:1;
             ">关闭</button>
-            <button id="hj-update-now-btn" style="
-                background:#4facfe;
-                border:none;
-                color:white;
-                padding:10px 0;
-                border-radius:8px;
-                cursor:pointer;
-                font-size:14px;
-                flex:1;
-            ">立即更新</button>
         </div>
     `;
     document.body.appendChild(notification);
-    document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
-        window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
-        notification.remove();
-        alert('安装后请重新打开浏览器生效');
+    
+    // 复制更新链接按钮逻辑
+    document.getElementById('hj-copy-update-btn')?.addEventListener('click', () => {
+        const updateUrl = GITHUB_VERSION_URL + '?_=' + Date.now();
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(updateUrl).then(() => {
+                showGlobalToast('✅ 更新链接已复制');
+            }).catch(() => {
+                showGlobalToast('❌ 复制失败，请手动复制', true);
+            });
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = updateUrl;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showGlobalToast('✅ 更新链接已复制');
+        }
     });
+    
+    // 立即更新按钮增加二次确认弹窗
+    document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
+        // 创建确认弹窗
+        const confirmModal = document.createElement('div');
+        confirmModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1000010;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            font-family: sans-serif;
+            min-width: 280px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: hjUpdateFadeIn 0.2s ease;
+        `;
+        confirmModal.innerHTML = `
+            <div style="margin-bottom: 15px; font-size: 22px; font-weight: 500;">
+                ⚠️ 更新确认 ⚠️
+            </div>
+            <div style="margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
+                跳转更新页面后，如没有自动安装脚本，请尝试手动复制地址去脚本页面导入
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="hj-confirm-cancel" style="
+                    background: rgba(255,255,255,0.2);
+                    border: none;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                ">取消</button>
+                <button id="hj-confirm-ok" style="
+                    background: #4facfe;
+                    border: none;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                ">确定</button>
+            </div>
+        `;
+        document.body.appendChild(confirmModal);
+        
+        const closeConfirm = () => confirmModal.remove();
+        
+        document.getElementById('hj-confirm-cancel')?.addEventListener('click', closeConfirm);
+        document.getElementById('hj-confirm-ok')?.addEventListener('click', () => {
+            closeConfirm();
+            window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
+            notification.remove();
+            alert('安装后请重新打开浏览器生效');
+        });
+        
+        // 点击遮罩关闭
+        confirmModal.addEventListener('click', (e) => {
+            if (e.target === confirmModal) closeConfirm();
+        });
+    });
+    
     document.getElementById('hj-close-btn')?.addEventListener('click', () => {
         notification.remove();
     });
@@ -232,39 +324,6 @@ function checkLocalVersionUpdate() {
 checkLocalVersionUpdate();
 checkForUpdate();
 
-    // 使用 GM_xmlhttpRequest 封装
-    function gmRequest(url, opts={}) {
-        const method = (opts.method||'GET').toUpperCase();
-        const headers = Object.assign({}, opts.headers||{});
-        const data = (opts.body!==undefined && opts.body!==null) ? String(opts.body) : null;
-        return new Promise((resolve)=>{
-            GM_xmlhttpRequest({
-                method,
-                url,
-                headers,
-                data,
-                onload: (res)=>{
-                    const ok = res.status>=200 && res.status<300;
-                    const status = res.status;
-                    const text = res.responseText||'';
-                    let cachedJsonParsed = null;
-                    const resp = {
-                        ok,
-                        status,
-                        async json(){ if(cachedJsonParsed!==null) return cachedJsonParsed; try{ cachedJsonParsed = text? JSON.parse(text): null; }catch(_){ cachedJsonParsed = null; } return cachedJsonParsed; },
-                        async text(){ return text; }
-                    };
-                    resolve(resp);
-                },
-                onerror: ()=>{
-                    resolve({ ok:false, status:0, json: async()=>null, text: async()=>'' });
-                }
-            });
-        });
-    }
-
-
-
     function escapeHtml(str){
         try{
             return String(str||'').replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
@@ -285,7 +344,6 @@ checkForUpdate();
         };
     }
 
-    // 保留原有的 showToast 用于其他场景（位置在右上角）
     function showToast(text){
         try{
             let box = document.getElementById('hj-toast-box');
@@ -303,8 +361,6 @@ checkForUpdate();
         }catch(_){}
     }
 
-    let announceOpen = false;
-    let announceCache = { title: '📢 公告', msg: '', ts: 0 };
     let downloadOpen = false;
     const STRICT_MODE = true;
     let parsingPending = true;
@@ -362,76 +418,6 @@ checkForUpdate();
         }catch(_){ }
     }
     function setPanelModalMode(on){ try{ const p = getFloatingPanel(); if (!p) return; p.style.zIndex = on ? '9999' : '999999'; if(!on){ p.style.display='block'; } }catch(e){ console.error(e); } }
-
-    function showAnnouncementModal() {
-        const existed = document.querySelector('.hj-modal-overlay[data-type="announce"]');
-        if (existed) {
-            existed.remove(); announceOpen = false; setPanelModalMode(false); ensurePanelVisible(); return;
-        }
-        if (announceOpen) return;
-
-        const modal = document.createElement('div');
-        modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type', 'announce');
-        modal.style.zIndex = '1000005';
-
-        modal.innerHTML = `
-        <div class="hj-modal" style="max-width: 600px; max-height: 80vh; display:flex; flex-direction:column;">
-            <div class="hj-modal-title">📢 公告</div>
-            <div class="hj-modal-content" style="flex:1; overflow:auto; padding:8px 6px;">
-                <div id="hj-ann-text" style="white-space:pre-wrap;word-break:break-word; font-size:14px; line-height:1.6; color:rgba(255,255,255,0.95);">正在加载...</div>
-            </div>
-            <div class="hj-modal-actions" style="display: flex; gap: 12px; justify-content: center;">
-                <button class="hj-modal-btn" id="hj-ann-close" style="flex:1; background: rgba(255,255,255,0.2);">关闭</button>
-            </div>
-        </div>`;
-
-        document.body.appendChild(modal);
-        announceOpen = true;
-        setPanelModalMode(true);
-
-        const closeAll = () => {
-            announceOpen = false; modal.remove(); setPanelModalMode(false); ensurePanelVisible();
-        };
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeAll();
-        });
-
-        document.getElementById('hj-ann-close')?.addEventListener('click', closeAll);
-
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: 'https://gist.githubusercontent.com/BIN-03/ff5cd09874cba6c1a8a352bf27b6067f/raw/Official_announcement.txt?_=' + Date.now(),
-            timeout: 8000,
-            onload: function(response) {
-                if (response.status === 200) {
-                    try {
-                        const data = JSON.parse(response.responseText);
-                        const contentEl = document.getElementById('hj-ann-text');
-                        if (contentEl) {
-                            contentEl.textContent = data.content || '暂无公告内容';
-                        }
-                    } catch (e) {
-                        document.getElementById('hj-ann-text').textContent = '公告格式错误';
-                    }
-                } else {
-                    document.getElementById('hj-ann-text').textContent = '公告加载失败';
-                }
-            },
-            onerror: function() {
-                document.getElementById('hj-ann-text').textContent = '网络错误';
-            }
-        });
-    }
-
-    async function serviceFetch(path, opts={}) {
-        const headers = Object.assign({}, opts.headers || {});
-        const method = (opts.method||'GET').toUpperCase();
-        if ((method==='POST' || method==='PUT' || method==='PATCH') && !headers['Content-Type']) {
-            headers['Content-Type'] = 'application/json';
-        }
-    }
 
     let currentHlsInstance = null;
     let capturedTsUrls = [];
@@ -967,44 +953,14 @@ checkForUpdate();
     }
 
     async function resolveFullVideoUrl({ tsUrl, previewM3u8Url }) {
-        try {
-            const epochAtStart = resolveEpoch;
-            const pageAtStart = currentPageUrl || window.location.href;
-            const payload = {
-                pageUrl: window.location.href,
-                previewM3u8Url: previewM3u8Url || null,
-                tsSamples: tsUrl ? [tsUrl] : (capturedTsUrls.slice(0,1) || []),
-                topicId: null
-            };
-            const res = await serviceFetch('/video/resolve', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-            if (!res.ok){
-                return false;
-            }
-            const data = await res.json();
-            if (data && data.fullM3u8Url) {
-                if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) {
-                    capturedM3u8Url = data.fullM3u8Url; sigCaptured = currentSig();
-                    lastFullUrl = data.fullM3u8Url; sigFull = currentSig();
-                    parsingPending = false;
-                    updatePlayButton();
-                    updateStrictUi();
-                }
-                return true;
-            }
-            return false;
-        } catch (_) { return false; }
+        // 移除无效的服务端请求，直接返回 false
+        return false;
     }
 
     function isElementVisible(el) {
         if (!el) return false;
         return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
     }
-
-
-
 
     function fireClickSequence(el){
         try{
@@ -1019,7 +975,6 @@ checkForUpdate();
             el.dispatchEvent(new MouseEvent('click', opts));
         }catch(_){}
     }
-
 
     function lazyViewportWarmup(){
         try{
@@ -1245,7 +1200,6 @@ checkForUpdate();
             .hj-btn-download { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
             /* QQ按钮单独渐变背景色 */
             .hj-btn-qq { background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%) !important; }
-            .hj-btn-ann { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%) !important; }
             .hj-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 999998; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
             .hj-modal { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 28px; min-width: 360px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); color: white; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -1286,9 +1240,6 @@ checkForUpdate();
                                 <polyline points="7 10 12 15 17 10"/>
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
-                        </button>
-                        <button class="hj-btn hj-btn-ann" id="hj-btn-ann" title="查看公告">
-                            <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png" style="width: 28px; height: 28px; border-radius: 6px;">
                         </button>
                         <button class="hj-btn hj-btn-qq" id="hj-btn-qq" title="联系作者">
     <img src="https://p.qpic.cn/qqconadmin/0/b095d8d0ad144de3943f5dcba95a9624/0"style="width:50px; height:27px;">
@@ -1391,7 +1342,6 @@ checkForUpdate();
                 return downloadVideo();
             }
             if (btn.id === 'hj-btn-qq') return handleQQGroup();
-            if (btn.id === 'hj-btn-ann') return showAnnouncementModal();
         }, 300);
         panel.addEventListener('click', onClick);
     }
@@ -1405,28 +1355,8 @@ checkForUpdate();
     }
 
     async function resolveFullFromServer(payload){
-        try{
-            const key = [location.href, payload && payload.previewM3u8Url || '', (payload && payload.tsSamples && payload.tsSamples[0]) || ''].join('|');
-            if (resolveCache.has(key)) return await resolveCache.get(key);
-            const p = (async ()=>{
-                const res = await serviceFetch('/video/resolve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload||{})
-                });
-                if(!res.ok){ return null; }
-                const data = await res.json();
-                if (data && data.fullM3u8Url) {
-                    lastResolvedPageUrl = window.location.href;
-                    return data.fullM3u8Url;
-                }
-                return null;
-            })();
-            resolveCache.set(key, p);
-            const result = await p;
-            setTimeout(()=>{ resolveCache.delete(key); }, 10000);
-            return result;
-        }catch(_){ return null; }
+        // 移除无效的服务端请求，直接返回 null
+        return null;
     }
 
     function destroyPlayer() {
@@ -1925,7 +1855,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
         if (isTopic) {
             startPreviewWarmup();
             // 延迟执行自动展开，确保DOM已渲染
-            setTimeout(() => expandPanelOnTopicPage(), 5000);
+            setTimeout(() => expandPanelOnTopicPage(), 3000);
         }
         if (isTopic) setTimeout(()=>{ try{ startBackgroundResolve(); }catch(_){ } }, 1200);
         if (isTopic) startResolveWatchdog();
@@ -1992,6 +1922,25 @@ function showDownloadModal(displayUrl, isLoading = false) {
         }catch(_){ }
     }
 
+    function ensurePreviewTriggered(maxAttempts, intervalMs) {
+        return new Promise(resolve => {
+            let attempt = 0;
+            const check = () => {
+                if (capturedM3u8Url) {
+                    resolve();
+                    return;
+                }
+                attempt++;
+                if (attempt >= maxAttempts) {
+                    resolve();
+                    return;
+                }
+                setTimeout(check, intervalMs);
+            };
+            check();
+        });
+    }
+
     function init() {
         checkLocalVersionUpdate();
         checkForUpdate();
@@ -2033,7 +1982,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
                     updateStrictUi();
 
                     // 进入帖子页面时，自动展开面板
-                    setTimeout(() => expandPanelOnTopicPage(), 5000);
+                    setTimeout(() => expandPanelOnTopicPage(), 3000);
                 }
             });
         } else {
@@ -2062,7 +2011,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 updateStrictUi();
 
                 // 进入帖子页面时，自动展开面板
-                setTimeout(() => expandPanelOnTopicPage(), 5000);
+                setTimeout(() => expandPanelOnTopicPage(), 3000);
             }
         }
     }
