@@ -60,12 +60,7 @@
     }
 
     // 显示更新弹窗
-    let lastNotifyTime = 0;
-
     function showUpdateNotification(newVersion) {
-        const now = Date.now();
-        if (now - lastNotifyTime < 500) return;
-        lastNotifyTime = now;
         const existing = document.getElementById('hj-update-notification');
         if (existing) existing.remove();
 
@@ -145,7 +140,6 @@
     `;
         document.body.appendChild(notification);
 
-        // 复制更新链接按钮逻辑
         document.getElementById('hj-copy-update-btn')?.addEventListener('click', () => {
             const updateUrl = GITHUB_VERSION_URL + '?_=' + Date.now();
             if (navigator.clipboard) {
@@ -165,7 +159,6 @@
             }
         });
 
-        // 立即更新按钮使用 confirm 确认框
         document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
             const confirmed = confirm('⚠️跳转安装页面后\n如未自动安装，请手动“复制更新链接”去脚本页面导入\n安装成功后请重启浏览器⚠️');
             if (confirmed) {
@@ -183,33 +176,38 @@
         }, 15000);
     }
 
-    // 检查更新
-    let lastUpdateCheckTime = 0;
-    const UPDATE_CHECK_COOLDOWN = 300000; // 300000 (5分钟)
-    async function checkForUpdate() {
+    // 首次进入网站时检查更新
+    async function checkForUpdateOnFirstVisit() {
         try {
-            const now = Date.now();
-            // 冷却时间内不弹窗
-            if (now - lastUpdateCheckTime < UPDATE_CHECK_COOLDOWN) {
-                return false;
-            }
-
             const latestVersion = await getLatestVersionFromGitHub();
             if (latestVersion && latestVersion !== SCRIPT_VERSION) {
-                lastUpdateCheckTime = now;
                 showUpdateNotification(latestVersion);
-                return true;
             }
-            return false;
         } catch (e) {
-            return false;
+            // 静默失败
+        }
+    }
+
+    // 每次进入帖子时强制检查更新
+    let pendingForceCheck = false;
+    async function forceCheckUpdateForTopic() {
+        if (pendingForceCheck) return;
+        pendingForceCheck = true;
+        try {
+            const latestVersion = await getLatestVersionFromGitHub();
+            if (latestVersion && latestVersion !== SCRIPT_VERSION) {
+                showUpdateNotification(latestVersion);
+            }
+        } catch (e) {
+            // 静默失败
+        } finally {
+            pendingForceCheck = false;
         }
     }
 
     // 全局Toast - 显示在最外层，不会被弹窗遮挡
     function showGlobalToast(text, isError = false) {
         try {
-            // 移除已存在的全局Toast
             const existing = document.getElementById('hj-global-toast');
             if (existing) existing.remove();
 
@@ -240,7 +238,6 @@
             animation: hjToastFadeInOut 2s ease forwards;
         `;
 
-            // 添加动画样式（如果不存在）
             if (!document.getElementById('hj-toast-animation-style')) {
                 const style = document.createElement('style');
                 style.id = 'hj-toast-animation-style';
@@ -257,19 +254,17 @@
 
             document.body.appendChild(toast);
 
-            // 2秒后自动移除
             setTimeout(() => {
                 if (toast && toast.remove) toast.remove();
             }, 2000);
         } catch (e) {}
     }
 
-    // 检查本地版本变化（增加 GM_deleteValue 的容错）
+    // 检查本地版本变化
     function checkLocalVersionUpdate() {
         try {
             GM_deleteValue('last_run_version');
-        } catch (e) {
-            /* 兼容不支持的环境 */ }
+        } catch (e) {}
         const lastVersion = GM_getValue('last_run_version', '');
         if (lastVersion && lastVersion !== SCRIPT_VERSION) {
             setTimeout(() => showGlobalToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
@@ -277,7 +272,8 @@
         GM_setValue('last_run_version', SCRIPT_VERSION);
     }
     checkLocalVersionUpdate();
-    checkForUpdate();
+    // 首次进入网站时检查更新
+    checkForUpdateOnFirstVisit();
 
     function escapeHtml(str) {
         try {
@@ -1012,7 +1008,6 @@
         } catch (_) {}
     }
 
-    // 播放和下载按钮绑定
     function attachPlayHandler() {
         const playBtn = document.getElementById('hj-btn-play');
         if (playBtn && !playBtn.__hj_bound) {
@@ -1045,7 +1040,6 @@
         }
     }
 
-    // QQ群跳转按钮处理函数
     function handleQQGroup() {
         window.open('https://qm.qq.com/cgi-bin/qm/qr?k=BBh2_32dpkw0DDb3PJRnP1J-pPW96Lhv&jump_from=webapi&authKey=n0jSy+OWeCJWtRl8kE05d6hGoZzRropB0QpoInmoALz1WIpg+0L22Uu48OD9KbPM', '_blank');
     }
@@ -1065,8 +1059,6 @@
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 e.preventDefault();
-
-                checkForUpdate();
 
                 const notReady = !isFullReady();
                 if (notReady && !isSignatureAligned()) {
@@ -1124,7 +1116,6 @@
         tsUrl,
         previewM3u8Url
     }) {
-        // 移除无效的服务端请求，直接返回 false
         return false;
     }
 
@@ -1264,12 +1255,9 @@
 
     function isExpandButton(element) {
         if (!element || !element.tagName) return false;
-
-        const tagName = element.tagName.toLowerCase();
         const text = element.textContent || element.innerText || '';
         const className = element.className || '';
         const id = element.id || '';
-
         const expandTexts = [
             '展开', '显示更多', '查看更多', '阅读更多', '点击展开', '展开全文', '全文',
             'more', 'expand', 'show more', 'read more', 'show all'
@@ -1277,7 +1265,6 @@
         const hasExpandText = expandTexts.some(expandText =>
             text.toLowerCase().includes(expandText.toLowerCase())
         );
-
         const expandClassIds = [
             'expand', 'more', 'show-more', 'read-more', 'unfold',
             'sell-btn', '展开', 'btn-more', 'btn-expand'
@@ -1286,7 +1273,6 @@
             className.toLowerCase().includes(expandClass.toLowerCase()) ||
             id.toLowerCase().includes(expandClass.toLowerCase())
         );
-
         const expandSelectors = [
             '[class*="expand"]',
             '[class*="more"]',
@@ -1298,7 +1284,6 @@
             '.btn-more',
             '.btn-expand'
         ];
-
         const matchesSelector = expandSelectors.some(selector => {
             try {
                 return element.matches(selector);
@@ -1306,26 +1291,18 @@
                 return false;
             }
         });
-
         return hasExpandText || hasExpandClass || matchesSelector;
     }
 
     function autoClickExpandButton() {
         const allElements = document.querySelectorAll('button, a, span, div');
-        let clickedCount = 0;
-
         allElements.forEach(element => {
             if (isExpandButton(element) && isElementVisible(element)) {
                 try {
                     element.click();
-                    clickedCount++;
-                } catch (e) {
-                    // Silent error
-                }
+                } catch (e) {}
             }
         });
-
-        return clickedCount;
     }
 
     function setupAutoExpandObserver() {
@@ -1433,7 +1410,6 @@
             @keyframes statusPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
             .hj-btn-play { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
             .hj-btn-download { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-            /* QQ按钮单独渐变背景色 */
             .hj-btn-qq { background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%) !important; }
             .hj-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 999998; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1486,10 +1462,8 @@
 
         document.body.appendChild(panel);
         setupPanelEvents(panel);
-
         attachPlayHandler();
         attachDownloadHandler();
-
         if (capturedM3u8Url) {
             updatePlayButton();
         }
@@ -1502,7 +1476,6 @@
         };
         document.addEventListener('visibilitychange', rebind);
         window.addEventListener('focus', rebind);
-
         let tries = 0;
         const readyTicker = setInterval(() => {
             tries++;
@@ -1517,43 +1490,33 @@
         if (!panel || panel.dataset.bound === '1') return;
         panel.dataset.bound = '1';
         const toggleBtn = document.getElementById('hj-toggle-btn');
-
         let startX, startY, startRight, startTop;
         let hasMoved = false;
-
         if (toggleBtn) {
             toggleBtn.addEventListener('mousedown', (e) => {
                 isDragging = true;
                 hasMoved = false;
                 startX = e.clientX;
                 startY = e.clientY;
-
                 const rect = panel.getBoundingClientRect();
                 startRight = window.innerWidth - rect.right;
                 startTop = rect.top;
-
                 panel.classList.add('dragging');
                 e.preventDefault();
             });
         }
-
         document.addEventListener('mousemove', (e) => {
             if (!isDragging || !toggleBtn) return;
-
             const deltaX = startX - e.clientX;
             const deltaY = startY - e.clientY;
-
             if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
                 hasMoved = true;
             }
-
             const newRight = startRight + deltaX;
             const newTop = startTop + deltaY;
-
             panel.style.right = Math.max(0, Math.min(window.innerWidth - 100, newRight)) + 'px';
             panel.style.top = Math.max(0, Math.min(window.innerHeight - 100, newTop)) + 'px';
         });
-
         document.addEventListener('mouseup', () => {
             if (isDragging && !hasMoved) {
                 isCollapsed = !isCollapsed;
@@ -1566,7 +1529,6 @@
             isDragging = false;
             panel.classList.remove('dragging');
         });
-
         const onClick = throttle((e) => {
             const btn = e.target.closest('.hj-btn');
             if (!btn) return;
@@ -1590,7 +1552,6 @@
     }
 
     async function resolveFullFromServer(payload) {
-        // 移除无效的服务端请求，直接返回 null
         return null;
     }
 
@@ -1603,7 +1564,6 @@
         if (overlay) {
             overlay.remove();
         }
-        // 清空当前播放地址
         currentPlayingUrl = null;
     }
 
@@ -1616,7 +1576,6 @@
                 currentHlsInstance.stopLoad?.();
                 currentHlsInstance.loadSource(url);
                 currentHlsInstance.startLoad?.();
-                // 更新当前播放地址
                 currentPlayingUrl = url;
             } else if (v && v.canPlayType('application/vnd.apple.mpegurl')) {
                 v.src = url;
@@ -1628,7 +1587,6 @@
 
     function playVideoInPage(m3u8Url) {
         destroyPlayer();
-
         const overlay = document.createElement('div');
         overlay.id = 'video-player-overlay';
         overlay.innerHTML = `
@@ -1643,7 +1601,6 @@
                 </video>
             </div>
         `;
-
         GM_addStyle(`
             #video-player-overlay {
                 position: fixed;
@@ -1706,7 +1663,6 @@
                 user-select: none;
             }
         `);
-
         try {
             overlay.setAttribute('data-page', currentPageUrl);
         } catch (_) {}
@@ -1716,20 +1672,16 @@
             closeBtn.addEventListener('click', destroyPlayer);
             closeBtn.__hj_bound = true;
         }
-
         const videoElement = document.getElementById('hls-video');
-
         let isDraggingVideo = false;
         let dragStartX = 0;
         let dragStartTime = 0;
-
         videoElement.addEventListener('mousedown', (e) => {
             isDraggingVideo = true;
             dragStartX = e.clientX;
             dragStartTime = videoElement.currentTime;
             e.preventDefault();
         });
-
         document.addEventListener('mousemove', (e) => {
             if (!isDraggingVideo) return;
             const deltaX = e.clientX - dragStartX;
@@ -1737,15 +1689,12 @@
             const newTime = Math.max(0, Math.min(videoElement.duration, dragStartTime + seekAmount));
             videoElement.currentTime = newTime;
         });
-
         document.addEventListener('mouseup', () => {
             isDraggingVideo = false;
         });
-
         let longPressTimer = null;
         let longPressInterval = null;
         const speedUpRate = 0.5;
-
         videoElement.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
             longPressTimer = setTimeout(() => {
@@ -1758,20 +1707,16 @@
                 }, 100);
             }, 500);
         });
-
         videoElement.addEventListener('mouseup', () => {
             clearTimeout(longPressTimer);
             clearInterval(longPressInterval);
         });
-
         videoElement.addEventListener('mouseleave', () => {
             clearTimeout(longPressTimer);
             clearInterval(longPressInterval);
         });
-
         let touchStartX = 0;
         let touchStartTime = 0;
-
         videoElement.addEventListener('touchstart', (e) => {
             touchStartX = e.touches[0].clientX;
             touchStartTime = videoElement.currentTime;
@@ -1785,7 +1730,6 @@
                 }, 100);
             }, 500);
         });
-
         videoElement.addEventListener('touchmove', (e) => {
             const deltaX = e.touches[0].clientX - touchStartX;
             const seekAmount = deltaX / 5;
@@ -1794,19 +1738,16 @@
             clearTimeout(longPressTimer);
             clearInterval(longPressInterval);
         });
-
         videoElement.addEventListener('touchend', () => {
             clearTimeout(longPressTimer);
             clearInterval(longPressInterval);
         });
-
         if (Hls.isSupported()) {
             const video = document.getElementById('hls-video');
             const hls = new Hls();
             currentHlsInstance = hls;
             hls.loadSource(m3u8Url);
             hls.attachMedia(video);
-            // 记录当前播放的地址
             currentPlayingUrl = m3u8Url;
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
                 video.play();
@@ -1823,13 +1764,10 @@
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
-    // 下载弹窗
+
     async function downloadVideo() {
-        checkForUpdate();
-        // 如果弹窗已经打开，就聚焦
         const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
         if (existingModal) {
-            // 滚动到弹窗位置，或只是闪烁一下提示
             existingModal.scrollIntoView?.({
                 behavior: 'smooth',
                 block: 'center'
@@ -1837,21 +1775,14 @@
             showGlobalToast('📥 下载窗口已打开');
             return;
         }
-
         downloadOpen = true;
-
-        // 立即使用当前已有的视频地址显示弹窗（如果有）
         let initialUrl = lastFullUrl || capturedM3u8Url || null;
         if (!initialUrl) {
             showGlobalToast('❌ 未捕获到视频URL，请稍后重试');
             downloadOpen = false;
             return;
         }
-
-        // 立即显示弹窗，避免等待网络请求
-        showDownloadModal(initialUrl, true); // 第二个参数表示“正在后台获取完整版”
-
-        // 后台异步尝试获取完整版链接（如果有预览版且尚未拿到完整版）
+        showDownloadModal(initialUrl, true);
         if (initialUrl && !isFullReady()) {
             try {
                 const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
@@ -1861,14 +1792,12 @@
                     tsSamples: tsSample
                 });
                 if (fullUrl && fullUrl !== initialUrl) {
-                    // 更新弹窗中的 URL
                     const urlTextarea = document.getElementById('hj-download-url');
                     if (urlTextarea) {
                         urlTextarea.value = fullUrl;
                         urlTextarea.classList.add('hj-url-updated');
                         showGlobalToast('✨ 已更新为完整版视频链接');
                     }
-                    // 同时更新全局变量
                     lastFullUrl = fullUrl;
                     capturedM3u8Url = fullUrl;
                     sigFull = currentSig();
@@ -1879,19 +1808,14 @@
         }
     }
 
-    // 弹窗显示
     function showDownloadModal(displayUrl, isLoading = false) {
-        // 如果已存在则直接返回
         const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
         if (existingModal) return;
-
         const modal = document.createElement('div');
         modal.className = 'hj-modal-overlay';
         modal.setAttribute('data-type', 'download');
         modal.style.zIndex = '1000005';
-
         const loadingHint = isLoading ? '<div style="font-size:12px; margin-top:6px; color: #ffd966;">⏳ 后台正在获取完整版链接，会自动更新...</div>' : '';
-
         modal.innerHTML = `
         <div class="hj-modal" style="max-width: 600px;">
             <div class="hj-modal-title">📥 视频下载</div>
@@ -1911,9 +1835,7 @@
                 <button class="hj-modal-btn" id="hj-download-close" style="width:100%; background: rgba(255,255,255,0.2);">关闭</button>
             </div>
         </div>`;
-
         document.body.appendChild(modal);
-
         const closeModal = () => {
             if (modal && modal.remove) {
                 modal.remove();
@@ -1922,11 +1844,9 @@
             setPanelModalMode(false);
             ensurePanelVisible();
         };
-
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
-
         const copyBtn = document.getElementById('hj-download-copy');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
@@ -1948,7 +1868,6 @@
                 }
             });
         }
-
         const goBtn = document.getElementById('hj-download-go');
         if (goBtn) {
             goBtn.addEventListener('click', () => {
@@ -1967,21 +1886,17 @@
                 closeModal();
             });
         }
-
         const closeBtn = document.getElementById('hj-download-close');
         if (closeBtn) closeBtn.addEventListener('click', closeModal);
-
         setPanelModalMode(true);
     }
-    async function playFullVideo(allowPreview = false) {
-        checkForUpdate();
 
+    async function playFullVideo(allowPreview = false) {
         if (inFlightPlay) return;
         inFlightPlay = true;
         try {
             const epochAtStart = resolveEpoch;
             const pageAtStart = currentPageUrl;
-
             if (!capturedM3u8Url) {
                 showGlobalToast('正在定位视频源…');
                 const domUrl = findM3u8InDom();
@@ -2021,7 +1936,6 @@
                 return;
             }
             playVideoInPage(preferred || capturedM3u8Url);
-
             try {
                 const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
                 let fullUrl = await Promise.race([
@@ -2096,12 +2010,10 @@
         }
     })();
 
-    // 自动展开面板
     function expandPanelOnTopicPage() {
         const panel = document.querySelector('.hj-floating-panel');
         if (panel && panel.classList && panel.classList.contains('collapsed')) {
             panel.classList.remove('collapsed');
-            // 同步全局状态变量
             if (typeof isCollapsed !== 'undefined') {
                 isCollapsed = false;
             }
@@ -2116,9 +2028,7 @@
         try {
             lastTopicId = getTopicIdFromUrl();
         } catch (_) {}
-
         destroyPlayer();
-
         capturedTsUrls = [];
         capturedM3u8Url = null;
         sigCaptured = '';
@@ -2134,7 +2044,6 @@
         } catch (_) {}
         updatePlayButton();
         updateStrictUi();
-
         setTimeout(() => {
             autoClickExpandButton();
             autoTriggerVideoPreview();
@@ -2142,8 +2051,9 @@
         const isTopic = newUrl.includes('/topic/') || newUrl.includes('/post/details') || window.location.hash.includes('/topic/');
         if (isTopic) {
             startPreviewWarmup();
-            // 延迟执行自动展开，确保DOM已渲染
             setTimeout(() => expandPanelOnTopicPage(), 3000);
+            // 每次进入帖子页面检测更新
+            setTimeout(() => forceCheckUpdateForTopic(), 500);
         }
         if (isTopic) setTimeout(() => {
             try {
@@ -2282,7 +2192,6 @@
     }
 
     function init() {
-        checkForUpdate()
         checkLocalVersionUpdate();
         setupApiInterceptor();
         setupXHROpenHook();
@@ -2291,7 +2200,6 @@
         setupFetchAttachmentTap();
         setupPerfObserver();
         setupHlsHook();
-
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 createControlPanel();
@@ -2302,17 +2210,14 @@
                 setupClickShield();
                 updateStrictUi();
                 startPanelWatchdog();
-
                 const isTopicPage = window.location.href.includes('/topic/') ||
                     window.location.hash.includes('/topic/') ||
                     window.location.href.includes('/post/details');
-
                 if (isTopicPage) {
                     setTimeout(() => {
                         autoClickExpandButton();
                         autoTriggerVideoPreview();
                     }, 1000);
-
                     setupAutoExpandObserver();
                     startPreviewWarmup();
                     setTimeout(() => {
@@ -2323,9 +2228,8 @@
                     startResolveWatchdog();
                     setTimeout(() => lazyViewportWarmup(), 800);
                     updateStrictUi();
-
-                    // 进入帖子页面时，自动展开面板
                     setTimeout(() => expandPanelOnTopicPage(), 3000);
+                    setTimeout(() => forceCheckUpdateForTopic(), 500);
                 }
             });
         } else {
@@ -2337,28 +2241,23 @@
             setupClickShield();
             updateStrictUi();
             startPanelWatchdog();
-
             const isTopicPage = window.location.href.includes('/topic/') ||
                 window.location.hash.includes('/topic/') ||
                 window.location.href.includes('/post/details');
-
             if (isTopicPage) {
                 setTimeout(() => {
                     autoClickExpandButton();
                     autoTriggerVideoPreview();
                 }, 1000);
-
                 setupAutoExpandObserver();
                 startPreviewWarmup();
                 setTimeout(() => lazyViewportWarmup(), 800);
                 updateStrictUi();
-
-                // 进入帖子页面时，自动展开面板
                 setTimeout(() => expandPanelOnTopicPage(), 3000);
+                setTimeout(() => forceCheckUpdateForTopic(), 500);
             }
         }
     }
 
     init();
-
 })();
