@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.11
+// @version      1.1.12
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -19,70 +19,71 @@
 // @license      MIT
 // ==/UserScript==
 (function() {
-'use strict';
-let currentPlayingUrl = null;
-// 版本更新检测
-function getCurrentVersion() {
-    if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
-        return GM_info.script.version.trim();
-    }
-    return '1.0.0';
-}
-const SCRIPT_VERSION = getCurrentVersion();
-const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
-
-async function getLatestVersionFromGitHub() {
-    try {
-        const response = await new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: GITHUB_VERSION_URL + '?_=' + Date.now(),
-                timeout: 8000,
-                headers: {
-                    "Cache-Control": "no-cache",
-                    "Pragma": "no-cache"
-                },
-                onload: (res) => resolve(res),
-                onerror: (err) => reject(err)
-            });
-        });
-        if (response && response.status === 200) {
-            const content = response.responseText;
-            const versionMatch = content.match(/@version\s+([\d.]+)/);
-            if (versionMatch && versionMatch[1]) {
-                return versionMatch[1].trim();
-            }
+    'use strict';
+    let currentPlayingUrl = null;
+    // 版本更新检测
+    function getCurrentVersion() {
+        if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
+            return GM_info.script.version.trim();
         }
-        return null;
-    } catch (e) {
-        return null;
+        return '1.0.0';
     }
-}
+    const SCRIPT_VERSION = getCurrentVersion();
+    const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
 
-// 显示更新弹窗
-let lastNotifyTime = 0;
-function showUpdateNotification(newVersion) {
-    const now = Date.now();
-    if (now - lastNotifyTime < 500) return;
-    lastNotifyTime = now;
-    const existing = document.getElementById('hj-update-notification');
-    if (existing) existing.remove();
+    async function getLatestVersionFromGitHub() {
+        try {
+            const response = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: GITHUB_VERSION_URL + '?_=' + Date.now(),
+                    timeout: 8000,
+                    headers: {
+                        "Cache-Control": "no-cache",
+                        "Pragma": "no-cache"
+                    },
+                    onload: (res) => resolve(res),
+                    onerror: (err) => reject(err)
+                });
+            });
+            if (response && response.status === 200) {
+                const content = response.responseText;
+                const versionMatch = content.match(/@version\s+([\d.]+)/);
+                if (versionMatch && versionMatch[1]) {
+                    return versionMatch[1].trim();
+                }
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    }
 
-    if (!document.getElementById('hj-update-animation-style')) {
-        const style = document.createElement('style');
-        style.id = 'hj-update-animation-style';
-        style.textContent = `
+    // 显示更新弹窗
+    let lastNotifyTime = 0;
+
+    function showUpdateNotification(newVersion) {
+        const now = Date.now();
+        if (now - lastNotifyTime < 500) return;
+        lastNotifyTime = now;
+        const existing = document.getElementById('hj-update-notification');
+        if (existing) existing.remove();
+
+        if (!document.getElementById('hj-update-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'hj-update-animation-style';
+            style.textContent = `
             @keyframes hjUpdateFadeIn {
                 from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
                 to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
             }
         `;
-        document.head.appendChild(style);
-    }
+            document.head.appendChild(style);
+        }
 
-    const notification = document.createElement('div');
-    notification.id = 'hj-update-notification';
-    notification.style.cssText = `
+        const notification = document.createElement('div');
+        notification.id = 'hj-update-notification';
+        notification.style.cssText = `
         position: fixed;
         top: 50%;
         left: 50%;
@@ -104,7 +105,7 @@ function showUpdateNotification(newVersion) {
         width: 240px;
     `;
 
-    notification.innerHTML = `
+        notification.innerHTML = `
         <div style="text-align:center;">
             <div style="font-size:18px;font-weight:600;margin-bottom:6px;">发现新版本</div>
             <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
@@ -142,129 +143,80 @@ function showUpdateNotification(newVersion) {
             ">关闭</button>
         </div>
     `;
-    document.body.appendChild(notification);
-    
-    // 复制更新链接按钮逻辑
-    document.getElementById('hj-copy-update-btn')?.addEventListener('click', () => {
-        const updateUrl = GITHUB_VERSION_URL + '?_=' + Date.now();
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(updateUrl).then(() => {
+        document.body.appendChild(notification);
+
+        // 复制更新链接按钮逻辑
+        document.getElementById('hj-copy-update-btn')?.addEventListener('click', () => {
+            const updateUrl = GITHUB_VERSION_URL + '?_=' + Date.now();
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(updateUrl).then(() => {
+                    showGlobalToast('✅ 更新链接已复制');
+                }).catch(() => {
+                    showGlobalToast('❌ 复制失败，请手动复制', true);
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = updateUrl;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
                 showGlobalToast('✅ 更新链接已复制');
-            }).catch(() => {
-                showGlobalToast('❌ 复制失败，请手动复制', true);
-            });
-        } else {
-            const textarea = document.createElement('textarea');
-            textarea.value = updateUrl;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showGlobalToast('✅ 更新链接已复制');
-        }
-    });
-    
-    // 立即更新按钮增加二次确认弹窗
-    document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
-        // 创建确认弹窗
-        const confirmModal = document.createElement('div');
-        confirmModal.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            z-index: 1000010;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            font-family: sans-serif;
-            min-width: 280px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
-            animation: hjUpdateFadeIn 0.2s ease;
-        `;
-        confirmModal.innerHTML = `
-            <div style="margin-bottom: 15px; font-size: 22px; font-weight: 500;">
-                ⚠️ 更新确认 ⚠️
-            </div>
-            <div style="margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
-                跳转更新页面后，如没有自动安装脚本，请尝试手动复制地址去脚本页面导入
-            </div>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button id="hj-confirm-cancel" style="
-                    background: rgba(255,255,255,0.2);
-                    border: none;
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-size: 14px;
-                ">取消</button>
-                <button id="hj-confirm-ok" style="
-                    background: #4facfe;
-                    border: none;
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-size: 14px;
-                ">确定</button>
-            </div>
-        `;
-        document.body.appendChild(confirmModal);
-        
-        const closeConfirm = () => confirmModal.remove();
-        
-        document.getElementById('hj-confirm-cancel')?.addEventListener('click', closeConfirm);
-        document.getElementById('hj-confirm-ok')?.addEventListener('click', () => {
-            closeConfirm();
-            window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
+            }
+        });
+
+        // 立即更新按钮使用 confirm 确认框
+        document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
+            const confirmed = confirm('⚠️跳转安装页面后\n如未自动安装，请手动“复制更新链接”去脚本页面导入\n安装成功后请重启浏览器⚠️');
+            if (confirmed) {
+                window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
+                notification.remove();
+            }
+        });
+
+        document.getElementById('hj-close-btn')?.addEventListener('click', () => {
             notification.remove();
-            alert('安装后请重新打开浏览器生效');
         });
-        
-        // 点击遮罩关闭
-        confirmModal.addEventListener('click', (e) => {
-            if (e.target === confirmModal) closeConfirm();
-        });
-    });
-    
-    document.getElementById('hj-close-btn')?.addEventListener('click', () => {
-        notification.remove();
-    });
 
-    setTimeout(() => {
-        if (notification && notification.remove) notification.remove();
-    }, 15000);
-}
-
-// 检查更新
-async function checkForUpdate() {
-    try {
-        const latestVersion = await getLatestVersionFromGitHub();
-        if (latestVersion && latestVersion !== SCRIPT_VERSION) {
-            showUpdateNotification(latestVersion);
-            return true;
-        }
-        return false;
-    } catch (e) {
-        return false;
+        setTimeout(() => {
+            if (notification && notification.remove) notification.remove();
+        }, 15000);
     }
-}
 
-// 全局Toast - 显示在最外层，不会被弹窗遮挡
-function showGlobalToast(text, isError = false) {
-    try {
-        // 移除已存在的全局Toast
-        const existing = document.getElementById('hj-global-toast');
-        if (existing) existing.remove();
+    // 检查更新
+    let lastUpdateCheckTime = 0;
+    const UPDATE_CHECK_COOLDOWN = 300000; // 300000 (5分钟)
+    async function checkForUpdate() {
+        try {
+            const now = Date.now();
+            // 冷却时间内不弹窗
+            if (now - lastUpdateCheckTime < UPDATE_CHECK_COOLDOWN) {
+                return false;
+            }
 
-        const toast = document.createElement('div');
-        toast.id = 'hj-global-toast';
-        toast.textContent = String(text || '');
-        toast.style.cssText = `
+            const latestVersion = await getLatestVersionFromGitHub();
+            if (latestVersion && latestVersion !== SCRIPT_VERSION) {
+                lastUpdateCheckTime = now;
+                showUpdateNotification(latestVersion);
+                return true;
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // 全局Toast - 显示在最外层，不会被弹窗遮挡
+    function showGlobalToast(text, isError = false) {
+        try {
+            // 移除已存在的全局Toast
+            const existing = document.getElementById('hj-global-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'hj-global-toast';
+            toast.textContent = String(text || '');
+            toast.style.cssText = `
             position: fixed;
             bottom: 30px;
             left: 50%;
@@ -288,11 +240,11 @@ function showGlobalToast(text, isError = false) {
             animation: hjToastFadeInOut 2s ease forwards;
         `;
 
-        // 添加动画样式（如果不存在）
-        if (!document.getElementById('hj-toast-animation-style')) {
-            const style = document.createElement('style');
-            style.id = 'hj-toast-animation-style';
-            style.textContent = `
+            // 添加动画样式（如果不存在）
+            if (!document.getElementById('hj-toast-animation-style')) {
+                const style = document.createElement('style');
+                style.id = 'hj-toast-animation-style';
+                style.textContent = `
                 @keyframes hjToastFadeInOut {
                     0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
                     15% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -300,54 +252,70 @@ function showGlobalToast(text, isError = false) {
                     100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
                 }
             `;
-            document.head.appendChild(style);
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(toast);
+
+            // 2秒后自动移除
+            setTimeout(() => {
+                if (toast && toast.remove) toast.remove();
+            }, 2000);
+        } catch (e) {}
+    }
+
+    // 检查本地版本变化（增加 GM_deleteValue 的容错）
+    function checkLocalVersionUpdate() {
+        try {
+            GM_deleteValue('last_run_version');
+        } catch (e) {
+            /* 兼容不支持的环境 */ }
+        const lastVersion = GM_getValue('last_run_version', '');
+        if (lastVersion && lastVersion !== SCRIPT_VERSION) {
+            setTimeout(() => showGlobalToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
         }
-
-        document.body.appendChild(toast);
-
-        // 2秒后自动移除
-        setTimeout(() => {
-            if (toast && toast.remove) toast.remove();
-        }, 2000);
-    } catch(e) {}
-}
-
-// 检查本地版本变化（增加 GM_deleteValue 的容错）
-function checkLocalVersionUpdate() {
-    try { GM_deleteValue('last_run_version'); } catch(e) { /* 兼容不支持的环境 */ }
-    const lastVersion = GM_getValue('last_run_version', '');
-    if (lastVersion && lastVersion !== SCRIPT_VERSION) {
-        setTimeout(() => showGlobalToast(`✨ 脚本已更新到 v${SCRIPT_VERSION}`), 3000);
+        GM_setValue('last_run_version', SCRIPT_VERSION);
     }
-    GM_setValue('last_run_version', SCRIPT_VERSION);
-}
-checkLocalVersionUpdate();
-checkForUpdate();
+    checkLocalVersionUpdate();
+    checkForUpdate();
 
-    function escapeHtml(str){
-        try{
-            return String(str||'').replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-        }catch(_){ return String(str||''); }
+    function escapeHtml(str) {
+        try {
+            return String(str || '').replace(/[&<>"']/g, c => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                "\"": "&quot;",
+                "'": "&#39;"
+            } [c]));
+        } catch (_) {
+            return String(str || '');
+        }
     }
 
-    function throttle(fn, wait){
-        let last = 0, tid = null;
-        return function(...args){
+    function throttle(fn, wait) {
+        let last = 0,
+            tid = null;
+        return function(...args) {
             const now = Date.now();
             const remain = last + wait - now;
-            if (remain <= 0){
+            if (remain <= 0) {
                 last = now;
                 fn.apply(this, args);
-            } else if (!tid){
-                tid = setTimeout(()=>{ tid = null; last = Date.now(); fn.apply(this, args); }, remain);
+            } else if (!tid) {
+                tid = setTimeout(() => {
+                    tid = null;
+                    last = Date.now();
+                    fn.apply(this, args);
+                }, remain);
             }
         };
     }
 
-    function showToast(text){
-        try{
+    function showToast(text) {
+        try {
             let box = document.getElementById('hj-toast-box');
-            if (!box){
+            if (!box) {
                 box = document.createElement('div');
                 box.id = 'hj-toast-box';
                 box.style.cssText = 'position:fixed;right:16px;top:16px;z-index:100000;display:flex;flex-direction:column;gap:8px;';
@@ -355,10 +323,13 @@ checkForUpdate();
             }
             const item = document.createElement('div');
             item.style.cssText = 'background:rgba(0,0,0,0.75);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.3);max-width:60vw;';
-            item.textContent = String(text||'');
+            item.textContent = String(text || '');
             box.appendChild(item);
-            setTimeout(()=>{ item.remove(); if (box && !box.children.length) box.remove(); }, 2000);
-        }catch(_){}
+            setTimeout(() => {
+                item.remove();
+                if (box && !box.children.length) box.remove();
+            }, 2000);
+        } catch (_) {}
     }
 
     let downloadOpen = false;
@@ -370,7 +341,13 @@ checkForUpdate();
     const RESOLVE_COOLDOWN_MS = 15000;
     const __tsProbeMemo = new Map();
 
-    function currentSig(){ try{ return (currentPageUrl||window.location.href) + '|' + (lastTopicId||''); }catch(_){ return (currentPageUrl||window.location.href); } }
+    function currentSig() {
+        try {
+            return (currentPageUrl || window.location.href) + '|' + (lastTopicId || '');
+        } catch (_) {
+            return (currentPageUrl || window.location.href);
+        }
+    }
     let sigCaptured = '';
     let sigFull = '';
     let currentPlayerUrl = '';
@@ -378,46 +355,104 @@ checkForUpdate();
     let fullLocked = false;
     window.__hj_warmup_stop = false;
 
-    function getFloatingPanel(){ return document.querySelector('.hj-floating-panel'); }
-    let panelWatchdogId = 0;
-    function startPanelWatchdog(){
-        try{
-            if (panelWatchdogId) return;
-            panelWatchdogId = setInterval(()=>{
-                try{
-                    let p = getFloatingPanel();
-                    if (!p){ createControlPanel(); p = getFloatingPanel(); }
-                    if (p){ p.style.display='block'; p.style.opacity='1'; if (!p.style.zIndex) p.style.zIndex='999999'; }
-                }catch(e){ console.error(e); }
-            }, 3000);
-        }catch(e){ console.error(e); }
+    function getFloatingPanel() {
+        return document.querySelector('.hj-floating-panel');
     }
-    function ensurePanelVisible(){
-        try{
+    let panelWatchdogId = 0;
+
+    function startPanelWatchdog() {
+        try {
+            if (panelWatchdogId) return;
+            panelWatchdogId = setInterval(() => {
+                try {
+                    let p = getFloatingPanel();
+                    if (!p) {
+                        createControlPanel();
+                        p = getFloatingPanel();
+                    }
+                    if (p) {
+                        p.style.display = 'block';
+                        p.style.opacity = '1';
+                        if (!p.style.zIndex) p.style.zIndex = '999999';
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 3000);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function ensurePanelVisible() {
+        try {
             let p = getFloatingPanel();
-            if (!p){ try{ createControlPanel(); p = getFloatingPanel(); }catch(e){ console.error(e); } }
-            if (p){ p.style.zIndex = '999999'; p.style.display = 'block'; p.style.opacity = '1'; }
-        }catch(_){ }
+            if (!p) {
+                try {
+                    createControlPanel();
+                    p = getFloatingPanel();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            if (p) {
+                p.style.zIndex = '999999';
+                p.style.display = 'block';
+                p.style.opacity = '1';
+            }
+        } catch (_) {}
     }
 
     let resolveWatchdogId = 0;
-    function stopResolveWatchdog(){ try{ if (resolveWatchdogId){ clearInterval(resolveWatchdogId); resolveWatchdogId = 0; } }catch(_){}}
-    function startResolveWatchdog(){
-        try{
+
+    function stopResolveWatchdog() {
+        try {
+            if (resolveWatchdogId) {
+                clearInterval(resolveWatchdogId);
+                resolveWatchdogId = 0;
+            }
+        } catch (_) {}
+    }
+
+    function startResolveWatchdog() {
+        try {
             if (resolveWatchdogId) return;
             let ticks = 0;
-            resolveWatchdogId = setInterval(()=>{
-                try{
-                    if (isFullReady()){ stopResolveWatchdog(); return; }
-                    try{ autoTriggerVideoPreview(); }catch(_){ }
-                    try{ startPreviewWarmup(); }catch(_){ }
-                    try{ startBackgroundResolve(); }catch(_){ }
-                }catch(_){ }
-                if (++ticks > 20){ stopResolveWatchdog(); }
+            resolveWatchdogId = setInterval(() => {
+                try {
+                    if (isFullReady()) {
+                        stopResolveWatchdog();
+                        return;
+                    }
+                    try {
+                        autoTriggerVideoPreview();
+                    } catch (_) {}
+                    try {
+                        startPreviewWarmup();
+                    } catch (_) {}
+                    try {
+                        startBackgroundResolve();
+                    } catch (_) {}
+                } catch (_) {}
+                if (++ticks > 20) {
+                    stopResolveWatchdog();
+                }
             }, 2000);
-        }catch(_){ }
+        } catch (_) {}
     }
-    function setPanelModalMode(on){ try{ const p = getFloatingPanel(); if (!p) return; p.style.zIndex = on ? '9999' : '999999'; if(!on){ p.style.display='block'; } }catch(e){ console.error(e); } }
+
+    function setPanelModalMode(on) {
+        try {
+            const p = getFloatingPanel();
+            if (!p) return;
+            p.style.zIndex = on ? '9999' : '999999';
+            if (!on) {
+                p.style.display = 'block';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
 
     let currentHlsInstance = null;
     let capturedTsUrls = [];
@@ -433,13 +468,17 @@ checkForUpdate();
     let isCollapsed = false;
     let isDragging = false;
 
-    function setupApiInterceptor() { return; }
+    function setupApiInterceptor() {
+        return;
+    }
 
-    function setupXHROpenHook(){
+    function setupXHROpenHook() {
         if (XMLHttpRequest.__hj_open_hooked) return;
         const origOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(method, url){
-            try{ this._hj_open_url = url; }catch(_){}
+        XMLHttpRequest.prototype.open = function(method, url) {
+            try {
+                this._hj_open_url = url;
+            } catch (_) {}
             return origOpen.apply(this, arguments);
         };
         XMLHttpRequest.__hj_open_hooked = true;
@@ -471,249 +510,302 @@ checkForUpdate();
         };
     }
 
-    function setupFetchCapture(){
+    function setupFetchCapture() {
         if (window.__hj_fetch_hooked) return;
         const origFetch = window.fetch;
         if (typeof origFetch !== 'function') return;
-        window.fetch = async function(input, init){
-            try{
+        window.fetch = async function(input, init) {
+            try {
                 const res = await origFetch.apply(this, arguments);
-                try{
+                try {
                     const u = res && (res.url || (res.headers && res.headers.get && res.headers.get('x-final-url')));
-                    if (u && typeof u === 'string'){
-                        if (u.includes('.m3u8')){
+                    if (u && typeof u === 'string') {
+                        if (u.includes('.m3u8')) {
                             capturedM3u8Url = u;
-                            setTimeout(()=>{ analyzeFullVideoUrl(null); }, 300);
-                        } else if (u.includes('.ts') && !u.includes('.ts.')){
+                            setTimeout(() => {
+                                analyzeFullVideoUrl(null);
+                            }, 300);
+                        } else if (u.includes('.ts') && !u.includes('.ts.')) {
                             capturedTsUrls.push(u);
                             if (capturedTsUrls.length === 1) analyzeFullVideoUrl(u);
                         }
                     }
-                }catch(_){}
+                } catch (_) {}
                 return res;
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
         };
         window.__hj_fetch_hooked = true;
     }
 
-    function findM3u8InDom(){
-        try{
-            const scripts = Array.from(document.scripts||[]);
-            for (const s of scripts){
+    function findM3u8InDom() {
+        try {
+            const scripts = Array.from(document.scripts || []);
+            for (const s of scripts) {
                 const txt = s && (s.textContent || '');
                 const m = txt && txt.match(/https?:[^'"\s]+\.m3u8[^'"\s]*/i);
                 if (m && m[0]) return m[0];
             }
             const nodes = Array.from(document.querySelectorAll('[src],[href]'));
-            for (const n of nodes){
+            for (const n of nodes) {
                 const u = n.getAttribute('src') || n.getAttribute('href') || '';
                 if (/\.m3u8(\?|$)/i.test(u)) return new URL(u, location.href).href;
             }
             const entries = (performance && performance.getEntriesByType) ? performance.getEntriesByType('resource') : [];
-            for (const e of entries||[]){
-                const u = e && (e.name||'');
+            for (const e of entries || []) {
+                const u = e && (e.name || '');
                 if (u && /\.m3u8(\?|$)/i.test(u)) return u;
                 if (!capturedTsUrls.length && u && /\.ts(\?|$)/i.test(u) && !/\.ts\./i.test(u)) capturedTsUrls.push(u);
             }
-        }catch(_){}
+        } catch (_) {}
         return null;
     }
 
-    function setupPerfObserver(){
-        try{
+    function setupPerfObserver() {
+        try {
             if (window.__hj_perf_obs) return;
             if (typeof PerformanceObserver !== 'function') return;
-            const obs = new PerformanceObserver((list)=>{
-                try{
+            const obs = new PerformanceObserver((list) => {
+                try {
                     const entries = list.getEntries() || [];
                     const callEpoch = resolveEpoch;
                     const callPage = currentPageUrl || window.location.href;
-                    for (const e of entries){
-                        const u = e && (e.name||'');
-                        if (u && /\.m3u8(\?|$)/i.test(u)){
-                            if (callEpoch === resolveEpoch && callPage === (currentPageUrl||window.location.href)){
-                                capturedM3u8Url = u; sigCaptured = currentSig();
-                                setTimeout(()=>analyzeFullVideoUrl(null), 100);
+                    for (const e of entries) {
+                        const u = e && (e.name || '');
+                        if (u && /\.m3u8(\?|$)/i.test(u)) {
+                            if (callEpoch === resolveEpoch && callPage === (currentPageUrl || window.location.href)) {
+                                capturedM3u8Url = u;
+                                sigCaptured = currentSig();
+                                setTimeout(() => analyzeFullVideoUrl(null), 100);
                             }
-                        } else if (u && /\.ts(\?|$)/i.test(u) && !/\.ts\./i.test(u)){
+                        } else if (u && /\.ts(\?|$)/i.test(u) && !/\.ts\./i.test(u)) {
                             if (!capturedTsUrls.includes(u)) capturedTsUrls.push(u);
                             if (capturedTsUrls.length === 1) analyzeFullVideoUrl(u);
                         }
                     }
-                }catch(_){ }
+                } catch (_) {}
             });
-            obs.observe({ type: 'resource', buffered: true });
+            obs.observe({
+                type: 'resource',
+                buffered: true
+            });
             window.__hj_perf_obs = obs;
-        }catch(_){}
+        } catch (_) {}
     }
 
-    function setupFetchAttachmentTap(){
-        try{
+    function setupFetchAttachmentTap() {
+        try {
             if (window.__hj_fetch_attach_tapped) return;
             const ofetch = window.fetch.bind(window);
-            window.fetch = async function(input, init){
-                try{
+            window.fetch = async function(input, init) {
+                try {
                     const p = (typeof input === 'string') ? input : (input && input.url) || '';
                     const callEpoch = resolveEpoch;
                     const callPage = currentPageUrl || window.location.href;
                     const resp = await ofetch.apply(this, arguments);
-                    if (/\/api\/attachment(\?|$)/.test(p)){
-                        try{
+                    if (/\/api\/attachment(\?|$)/.test(p)) {
+                        try {
                             const clone = resp.clone();
                             const txt = await clone.text();
-                            let obj = null; try{ obj = JSON.parse(txt); }catch(_){ }
+                            let obj = null;
+                            try {
+                                obj = JSON.parse(txt);
+                            } catch (_) {}
                             const remote = obj && (obj.remoteUrl || (obj.data && obj.data.remoteUrl));
-                            if (typeof remote === 'string' && /\.m3u8(\?|$)/i.test(remote)){
-                                if (!capturedM3u8Url && callEpoch === resolveEpoch && callPage === currentPageUrl && isTopicPageNow()){
-                                    capturedM3u8Url = remote; sigCaptured = currentSig();
-                                    setTimeout(()=>analyzeFullVideoUrl(null), 0);
-                                    setTimeout(()=>startBackgroundResolve(), 0);
+                            if (typeof remote === 'string' && /\.m3u8(\?|$)/i.test(remote)) {
+                                if (!capturedM3u8Url && callEpoch === resolveEpoch && callPage === currentPageUrl && isTopicPageNow()) {
+                                    capturedM3u8Url = remote;
+                                    sigCaptured = currentSig();
+                                    setTimeout(() => analyzeFullVideoUrl(null), 0);
+                                    setTimeout(() => startBackgroundResolve(), 0);
                                 }
                             }
-                        }catch(_){ }
+                        } catch (_) {}
                     }
                     return resp;
-                }catch(e){ return ofetch.apply(this, arguments); }
+                } catch (e) {
+                    return ofetch.apply(this, arguments);
+                }
             };
             window.__hj_fetch_attach_tapped = true;
-        }catch(_){}
+        } catch (_) {}
     }
 
-    function getTopicIdFromUrl(){
-        try{
+    function getTopicIdFromUrl() {
+        try {
             const u = new URL(window.location.href);
             const qp = u.searchParams;
             const cand = [qp.get('id'), qp.get('pid'), qp.get('tid')].filter(Boolean);
-            for (const v of cand){ if (/^\d+$/.test(v)) return v; }
+            for (const v of cand) {
+                if (/^\d+$/.test(v)) return v;
+            }
             const m = u.pathname.match(/\b(\d{4,})\b(?!.*\d)/);
             if (m) return m[1];
-        }catch(_){ }
+        } catch (_) {}
         return null;
     }
 
-    function probePreviewFromPreviewBtn(){
-        try{
+    function probePreviewFromPreviewBtn() {
+        try {
             if (capturedM3u8Url) return true;
             const btn = document.querySelector('span.preview-btn, .preview-btn');
             if (!btn) return false;
             const url = btn.getAttribute('data-url') || '';
-            if (url && /\.m3u8(\?|$)/i.test(url)){
+            if (url && /\.m3u8(\?|$)/i.test(url)) {
                 capturedM3u8Url = new URL(url, location.href).href;
-                setTimeout(()=>analyzeFullVideoUrl(null), 0);
-                setTimeout(()=>startBackgroundResolve(), 0);
-                setTimeout(()=>ensureTsSampleFromPreview(capturedM3u8Url), 0);
+                setTimeout(() => analyzeFullVideoUrl(null), 0);
+                setTimeout(() => startBackgroundResolve(), 0);
+                setTimeout(() => ensureTsSampleFromPreview(capturedM3u8Url), 0);
                 return true;
             }
-        }catch(_){}
+        } catch (_) {}
         return false;
     }
 
-    function triggerPreviewButtonClick(){
-        try{
+    function triggerPreviewButtonClick() {
+        try {
             const btn = document.querySelector('span.preview-btn, .preview-btn');
             if (!btn) return false;
             const rect = btn.getBoundingClientRect();
-            try{ btn.scrollIntoView({block:'center', inline:'center'}); }catch(_){}
-            const opts = { bubbles:true, cancelable:true, clientX: Math.floor(rect.left+5), clientY: Math.floor(rect.top+5) };
+            try {
+                btn.scrollIntoView({
+                    block: 'center',
+                    inline: 'center'
+                });
+            } catch (_) {}
+            const opts = {
+                bubbles: true,
+                cancelable: true,
+                clientX: Math.floor(rect.left + 5),
+                clientY: Math.floor(rect.top + 5)
+            };
             btn.dispatchEvent(new MouseEvent('pointerdown', opts));
             btn.dispatchEvent(new MouseEvent('mousedown', opts));
             btn.dispatchEvent(new MouseEvent('mouseup', opts));
             btn.dispatchEvent(new MouseEvent('pointerup', opts));
             btn.dispatchEvent(new MouseEvent('click', opts));
             return true;
-        }catch(_){ return false; }
+        } catch (_) {
+            return false;
+        }
     }
 
-    async function probePreviewViaApi(){
+    async function probePreviewViaApi() {
         if (capturedM3u8Url) return true;
         const topicId = getTopicIdFromUrl();
         if (!topicId) return false;
-        try{
-            const res = await fetch(`${location.origin}/api/topic/${topicId}`, { credentials:'include' });
-            if (res.ok){
+        try {
+            const res = await fetch(`${location.origin}/api/topic/${topicId}`, {
+                credentials: 'include'
+            });
+            if (res.ok) {
                 let data = await res.json();
-                if (data && data.data){
+                if (data && data.data) {
                     let body = null;
-                    try{ body = JSON.parse(data.data); }catch(_){}
-                    if (!body){
-                        try{ body = JSON.parse(atob(atob(atob(data.data)))); }catch(_){}
+                    try {
+                        body = JSON.parse(data.data);
+                    } catch (_) {}
+                    if (!body) {
+                        try {
+                            body = JSON.parse(atob(atob(atob(data.data))));
+                        } catch (_) {}
                     }
-                    if (!body){
-                        try{ body = JSON.parse(atob(atob(data.data))); }catch(_){}
+                    if (!body) {
+                        try {
+                            body = JSON.parse(atob(atob(data.data)));
+                        } catch (_) {}
                     }
                     if (!body && typeof data.data === 'object') body = data.data;
                     const atts = body && body.attachments || [];
-                    for (const a of atts){
-                        if (a && a.category === 'video' && typeof a.remoteUrl === 'string' && /\.m3u8(\?|$)/i.test(a.remoteUrl)){
+                    for (const a of atts) {
+                        if (a && a.category === 'video' && typeof a.remoteUrl === 'string' && /\.m3u8(\?|$)/i.test(a.remoteUrl)) {
                             capturedM3u8Url = a.remoteUrl;
-                            setTimeout(()=>analyzeFullVideoUrl(null), 0);
-                            setTimeout(()=>startBackgroundResolve(), 0);
+                            setTimeout(() => analyzeFullVideoUrl(null), 0);
+                            setTimeout(() => startBackgroundResolve(), 0);
                             return true;
                         }
                     }
-                    const v = atts.find(x=>x && x.category==='video');
-                    if (v && v.id){
-                        try{
+                    const v = atts.find(x => x && x.category === 'video');
+                    if (v && v.id) {
+                        try {
                             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
-                            const payload = { id: v.id, resource_type: 'topic', resource_id: body.topicId || Number(topicId)||topicId, line: 'normal1', is_ios: isIOS?1:0 };
-                            const r2 = await fetch(`${location.origin}/api/attachment`,{
-                                method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+                            const payload = {
+                                id: v.id,
+                                resource_type: 'topic',
+                                resource_id: body.topicId || Number(topicId) || topicId,
+                                line: 'normal1',
+                                is_ios: isIOS ? 1 : 0
+                            };
+                            const r2 = await fetch(`${location.origin}/api/attachment`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
                             });
-                            if (r2.ok){
+                            if (r2.ok) {
                                 const d2 = await r2.json();
-                                const remote = d2 && (d2.remoteUrl || (d2.data&&d2.data.remoteUrl));
-                                if (typeof remote === 'string' && /\.m3u8(\?|$)/i.test(remote)){
+                                const remote = d2 && (d2.remoteUrl || (d2.data && d2.data.remoteUrl));
+                                if (typeof remote === 'string' && /\.m3u8(\?|$)/i.test(remote)) {
                                     capturedM3u8Url = remote;
-                                    setTimeout(()=>analyzeFullVideoUrl(null), 0);
-                                    setTimeout(()=>startBackgroundResolve(), 0);
+                                    setTimeout(() => analyzeFullVideoUrl(null), 0);
+                                    setTimeout(() => startBackgroundResolve(), 0);
                                     return true;
                                 }
                             }
-                        }catch(_){}
+                        } catch (_) {}
                     }
                 }
             }
-        }catch(_){}
+        } catch (_) {}
         return false;
     }
 
-    function setupHlsHook(){
-        try{
+    function setupHlsHook() {
+        try {
             if (window.__hj_hls_hooked) return;
-            const tryHook = ()=>{
-                try{
+            const tryHook = () => {
+                try {
                     const H = window.Hls;
                     if (!H || !H.prototype || !H.prototype.loadSource) return false;
                     const orig = H.prototype.loadSource;
-                    H.prototype.loadSource = function(url){
-                        try{
-                            if (url && typeof url === 'string'){
+                    H.prototype.loadSource = function(url) {
+                        try {
+                            if (url && typeof url === 'string') {
                                 capturedM3u8Url = url;
-                                setTimeout(()=>analyzeFullVideoUrl(null), 100);
+                                setTimeout(() => analyzeFullVideoUrl(null), 100);
                             }
-                        }catch(_){}
+                        } catch (_) {}
                         return orig.apply(this, arguments);
                     };
                     window.__hj_hls_hooked = true;
                     return true;
-                }catch(_){ return false; }
+                } catch (_) {
+                    return false;
+                }
             };
-            if (!tryHook()){
+            if (!tryHook()) {
                 let attempts = 0;
-                const t = setInterval(()=>{ attempts++; if (tryHook() || attempts>20) clearInterval(t); }, 300);
+                const t = setInterval(() => {
+                    attempts++;
+                    if (tryHook() || attempts > 20) clearInterval(t);
+                }, 300);
             }
-        }catch(_){}
+        } catch (_) {}
     }
 
     function analyzeFullVideoUrl(tsUrl) {
         try {
-            resolveFullVideoUrl({ tsUrl, previewM3u8Url: capturedM3u8Url })
+            resolveFullVideoUrl({
+                    tsUrl,
+                    previewM3u8Url: capturedM3u8Url
+                })
                 .then((ok) => {
                     if (ok) {
                         setTimeout(() => {
-                            try{
+                            try {
                                 const v = document.getElementById('hls-video');
                                 if (v && capturedM3u8Url && !/_preview/i.test(capturedM3u8Url)) {
                                     lastFullUrl = capturedM3u8Url;
@@ -721,7 +813,7 @@ checkForUpdate();
                                     parsingPending = false;
                                     updateStrictUi();
                                 }
-                            }catch(_){}
+                            } catch (_) {}
                         }, 500);
                     }
                 })
@@ -729,72 +821,101 @@ checkForUpdate();
         } catch (error) {}
     }
 
-    function safeSwitchPlayerSource(url){
-        try{
+    function safeSwitchPlayerSource(url) {
+        try {
             if (!url) return;
             if (fullLocked && /_preview/i.test(url)) return;
             const now = Date.now();
             if (currentPlayerUrl === url) return;
-            if (now - (window.__hj_last_switch_at||0) < 1500) return;
+            if (now - (window.__hj_last_switch_at || 0) < 1500) return;
             switchPlayerSource(url);
             currentPlayerUrl = url;
             window.__hj_last_switch_at = now;
-            if (!/_preview/i.test(url)){
+            if (!/_preview/i.test(url)) {
                 fullLocked = true;
                 window.__hj_warmup_stop = true;
                 parsingPending = false;
                 updateStrictUi();
             }
-        }catch(_){}
+        } catch (_) {}
     }
 
-    async function ensureFullBeforePlay(maxWaitMs=2500){
-        try{
-            if (capturedM3u8Url && sigCaptured===currentSig() && !/_preview/i.test(capturedM3u8Url)) return capturedM3u8Url;
-            if (lastFullUrl && sigFull===currentSig()) return lastFullUrl;
-            const tsSample = (capturedTsUrls && capturedTsUrls.length>0) ? [capturedTsUrls[0]] : [];
-            if (!fullResolvePromise){
-                fullResolvePromise = resolveFullFromServer({ pageUrl: location.href, previewM3u8Url: capturedM3u8Url, tsSamples: tsSample })
-                    .then(u=>{ if (u && !/_preview/i.test(u)) { lastFullUrl = u; sigFull = currentSig(); capturedM3u8Url = u; sigCaptured = currentSig(); } return u; })
-                    .finally(()=>{ fullResolvePromise = null; });
+    async function ensureFullBeforePlay(maxWaitMs = 2500) {
+        try {
+            if (capturedM3u8Url && sigCaptured === currentSig() && !/_preview/i.test(capturedM3u8Url)) return capturedM3u8Url;
+            if (lastFullUrl && sigFull === currentSig()) return lastFullUrl;
+            const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
+            if (!fullResolvePromise) {
+                fullResolvePromise = resolveFullFromServer({
+                        pageUrl: location.href,
+                        previewM3u8Url: capturedM3u8Url,
+                        tsSamples: tsSample
+                    })
+                    .then(u => {
+                        if (u && !/_preview/i.test(u)) {
+                            lastFullUrl = u;
+                            sigFull = currentSig();
+                            capturedM3u8Url = u;
+                            sigCaptured = currentSig();
+                        }
+                        return u;
+                    })
+                    .finally(() => {
+                        fullResolvePromise = null;
+                    });
             }
-            const timeout = new Promise(res=>setTimeout(()=>res(null), maxWaitMs));
+            const timeout = new Promise(res => setTimeout(() => res(null), maxWaitMs));
             const url = await Promise.race([fullResolvePromise, timeout]);
             return (url && !/_preview/i.test(url)) ? url : null;
-        }catch(_){ return null; }
+        } catch (_) {
+            return null;
+        }
     }
 
-    function isFullReady(){
+    function isFullReady() {
         const sig = currentSig();
-        const fullOk = (sigFull===sig) && !!lastFullUrl;
-        const capOk = (sigCaptured===sig) && !!(capturedM3u8Url && !/_preview/i.test(capturedM3u8Url));
+        const fullOk = (sigFull === sig) && !!lastFullUrl;
+        const capOk = (sigCaptured === sig) && !!(capturedM3u8Url && !/_preview/i.test(capturedM3u8Url));
         return !!(fullOk || capOk);
     }
 
-    function isSignatureAligned(){
+    function isSignatureAligned() {
         const sig = currentSig();
-        return (sigCaptured===sig) || (sigFull===sig);
+        return (sigCaptured === sig) || (sigFull === sig);
     }
 
-    async function forceRecaptureForCurrentPage(maxWaitMs=5000){
-        try{
-            capturedM3u8Url = null; lastFullUrl = null; sigCaptured=''; sigFull=''; parsingPending = true; updateStrictUi();
-            try{ autoTriggerVideoPreview(); }catch(_){ }
-            try{ startPreviewWarmup(); }catch(_){ }
-            try{ startBackgroundResolve(); }catch(_){ }
+    async function forceRecaptureForCurrentPage(maxWaitMs = 5000) {
+        try {
+            capturedM3u8Url = null;
+            lastFullUrl = null;
+            sigCaptured = '';
+            sigFull = '';
+            parsingPending = true;
+            updateStrictUi();
+            try {
+                autoTriggerVideoPreview();
+            } catch (_) {}
+            try {
+                startPreviewWarmup();
+            } catch (_) {}
+            try {
+                startBackgroundResolve();
+            } catch (_) {}
             const start = Date.now();
-            while(Date.now()-start < maxWaitMs){
+            while (Date.now() - start < maxWaitMs) {
                 if (isFullReady()) break;
-                await new Promise(r=>setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 300));
             }
             updateStrictUi();
-            const ok = isFullReady() || (capturedM3u8Url && sigCaptured===currentSig());
+            const ok = isFullReady() || (capturedM3u8Url && sigCaptured === currentSig());
             return !!ok;
-        }catch(_){ return false; }
+        } catch (_) {
+            return false;
+        }
     }
 
-    async function startBackgroundResolve(){
-        try{
+    async function startBackgroundResolve() {
+        try {
             if (isFullReady()) return;
             if (!capturedM3u8Url) return;
             if (fullResolvePromise) return;
@@ -802,64 +923,93 @@ checkForUpdate();
             if (now - lastResolveTryAt < RESOLVE_COOLDOWN_MS) return;
             const epochAtStart = resolveEpoch;
             const pageAtStart = currentPageUrl || window.location.href;
-            let tsSample = (capturedTsUrls && capturedTsUrls.length>0) ? [capturedTsUrls[0]] : [];
-            if ((!tsSample || !tsSample.length) && capturedM3u8Url){
-                try{ const one = await ensureTsSampleFromPreview(capturedM3u8Url); if (one) tsSample = [one]; }catch(_){ }
+            let tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
+            if ((!tsSample || !tsSample.length) && capturedM3u8Url) {
+                try {
+                    const one = await ensureTsSampleFromPreview(capturedM3u8Url);
+                    if (one) tsSample = [one];
+                } catch (_) {}
             }
             if (fullLocked) return;
-            fullResolvePromise = resolveFullFromServer({ pageUrl: location.href, previewM3u8Url: capturedM3u8Url, tsSamples: tsSample })
-                .then(u=>{
-                    if (u && !/_preview/i.test(u)){
-                        if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl){
-                            lastFullUrl = u; sigFull = currentSig();
-                            capturedM3u8Url = u; sigCaptured = currentSig();
-                            parsingPending = false; updateStrictUi();
-                            try{ safeSwitchPlayerSource(u); }catch(_){ }
+            fullResolvePromise = resolveFullFromServer({
+                    pageUrl: location.href,
+                    previewM3u8Url: capturedM3u8Url,
+                    tsSamples: tsSample
+                })
+                .then(u => {
+                    if (u && !/_preview/i.test(u)) {
+                        if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) {
+                            lastFullUrl = u;
+                            sigFull = currentSig();
+                            capturedM3u8Url = u;
+                            sigCaptured = currentSig();
+                            parsingPending = false;
+                            updateStrictUi();
+                            try {
+                                safeSwitchPlayerSource(u);
+                            } catch (_) {}
                         }
-                        try{ if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) showGlobalToast('完整版已就绪'); }catch(_){ }
+                        try {
+                            if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) showGlobalToast('完整版已就绪');
+                        } catch (_) {}
                     }
                 })
-                .catch(()=>{})
-                .finally(()=>{ fullResolvePromise = null; lastResolveTryAt = Date.now(); });
-        }catch(_){ }
+                .catch(() => {})
+                .finally(() => {
+                    fullResolvePromise = null;
+                    lastResolveTryAt = Date.now();
+                });
+        } catch (_) {}
     }
 
-    async function ensureTsSampleFromPreview(previewUrl){
-        try{
+    async function ensureTsSampleFromPreview(previewUrl) {
+        try {
             const memo = __tsProbeMemo.get(previewUrl);
             const now = Date.now();
             if (memo && memo.ts && (now - memo.tsAt) < RESOLVE_COOLDOWN_MS) return memo.ts;
-            const res = await fetch(previewUrl, { method:'GET', credentials:'omit' });
+            const res = await fetch(previewUrl, {
+                method: 'GET',
+                credentials: 'omit'
+            });
             if (!res.ok) return null;
             const text = await res.text();
             const lines = text.split(/\r?\n/);
-            for (let i=0;i<lines.length;i++){
-                const L = (lines[i]||'').trim();
+            for (let i = 0; i < lines.length; i++) {
+                const L = (lines[i] || '').trim();
                 if (!L || L.startsWith('#')) continue;
-                if (/\.ts(\?|$)/i.test(L)){
+                if (/\.ts(\?|$)/i.test(L)) {
                     const abs = new URL(L, previewUrl).href;
-                    if (abs){
+                    if (abs) {
                         if (!capturedTsUrls) capturedTsUrls = [];
                         if (!capturedTsUrls.includes(abs)) capturedTsUrls.push(abs);
-                        __tsProbeMemo.set(previewUrl, { ts: abs, tsAt: now });
+                        __tsProbeMemo.set(previewUrl, {
+                            ts: abs,
+                            tsAt: now
+                        });
                         return abs;
                     }
                 }
             }
             return null;
-        }catch(_){ return null; }
+        } catch (_) {
+            return null;
+        }
     }
 
-    function updateStrictUi(){
-        try{
+    function updateStrictUi() {
+        try {
             const playBtn = document.getElementById('hj-btn-play');
             const downBtn = document.getElementById('hj-btn-download');
             const ready = isFullReady();
             const parsing = STRICT_MODE ? !ready : false;
-            const dim = (el)=>{ if(!el) return; el.style.opacity = parsing ? '0.5' : '1'; };
-            dim(playBtn); dim(downBtn);
+            const dim = (el) => {
+                if (!el) return;
+                el.style.opacity = parsing ? '0.5' : '1';
+            };
+            dim(playBtn);
+            dim(downBtn);
             updatePlayButton();
-        }catch(_){}
+        } catch (_) {}
     }
 
     // 播放和下载按钮绑定
@@ -870,7 +1020,6 @@ checkForUpdate();
             playBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                checkForUpdate();
                 if (!isFullReady()) {
                     showGlobalToast('视频还在解析中，请等几秒钟哦~');
                     return;
@@ -887,7 +1036,6 @@ checkForUpdate();
             downloadBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                checkForUpdate();
                 if (!isFullReady()) {
                     showGlobalToast('视频还在解析中，请等几秒钟哦~');
                     return;
@@ -902,16 +1050,16 @@ checkForUpdate();
         window.open('https://qm.qq.com/cgi-bin/qm/qr?k=BBh2_32dpkw0DDb3PJRnP1J-pPW96Lhv&jump_from=webapi&authKey=n0jSy+OWeCJWtRl8kE05d6hGoZzRropB0QpoInmoALz1WIpg+0L22Uu48OD9KbPM', '_blank');
     }
 
-    function attachStrictHandlers(){
-        try{
+    function attachStrictHandlers() {
+        try {
             attachPlayHandler();
             attachDownloadHandler();
-        }catch(_){}
+        } catch (_) {}
     }
 
-    function setupClickShield(){
-        try{
-            const handler = (e)=>{
+    function setupClickShield() {
+        try {
+            const handler = (e) => {
                 const el = e.target && e.target.closest && e.target.closest('#hj-btn-play, #hj-btn-download');
                 if (!el) return;
                 e.stopImmediatePropagation();
@@ -921,38 +1069,61 @@ checkForUpdate();
                 checkForUpdate();
 
                 const notReady = !isFullReady();
-                if (notReady && !isSignatureAligned()){
-                    if (!window.__hj_recap_inflight){
+                if (notReady && !isSignatureAligned()) {
+                    if (!window.__hj_recap_inflight) {
                         window.__hj_recap_inflight = true;
                         showGlobalToast('正在为当前页面重新捕获视频地址…');
-                        forceRecaptureForCurrentPage(5000).then((ok)=>{
-                            try{
-                                if (ok && (isFullReady() || (capturedM3u8Url && sigCaptured===currentSig()))){
-                                    if (el && el.id === 'hj-btn-play'){ try{ playFullVideo(true); }catch(_){ } }
+                        forceRecaptureForCurrentPage(5000).then((ok) => {
+                            try {
+                                if (ok && (isFullReady() || (capturedM3u8Url && sigCaptured === currentSig()))) {
+                                    if (el && el.id === 'hj-btn-play') {
+                                        try {
+                                            playFullVideo(true);
+                                        } catch (_) {}
+                                    }
                                 }
-                            }finally{ window.__hj_recap_inflight = false; updateStrictUi(); }
+                            } finally {
+                                window.__hj_recap_inflight = false;
+                                updateStrictUi();
+                            }
                         });
                     }
                     return;
                 }
-                if (el.id === 'hj-btn-play'){
-                    if (STRICT_MODE && notReady){
-                        if (capturedM3u8Url && sigCaptured===currentSig()) { try{ playFullVideo(true); }catch(_){ } return; }
-                        showGlobalToast('视频还在解析中，请等几秒钟哦~'); return;
+                if (el.id === 'hj-btn-play') {
+                    if (STRICT_MODE && notReady) {
+                        if (capturedM3u8Url && sigCaptured === currentSig()) {
+                            try {
+                                playFullVideo(true);
+                            } catch (_) {}
+                            return;
+                        }
+                        showGlobalToast('视频还在解析中，请等几秒钟哦~');
+                        return;
                     }
-                    try{ playFullVideo(); }catch(_){ }
-                } else if (el.id === 'hj-btn-download'){
-                    if (STRICT_MODE && notReady) { showGlobalToast('视频还在解析中，请等几秒钟哦~'); return; }
-                    try{ downloadVideo(); }catch(_){ }
+                    try {
+                        playFullVideo();
+                    } catch (_) {}
+                } else if (el.id === 'hj-btn-download') {
+                    if (STRICT_MODE && notReady) {
+                        showGlobalToast('视频还在解析中，请等几秒钟哦~');
+                        return;
+                    }
+                    try {
+                        downloadVideo();
+                    } catch (_) {}
                 }
             };
-            ['click','mousedown','mouseup','touchstart','touchend'].forEach(type=>{
+            ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach(type => {
                 document.addEventListener(type, handler, true);
             });
-        }catch(_){ }
+        } catch (_) {}
     }
 
-    async function resolveFullVideoUrl({ tsUrl, previewM3u8Url }) {
+    async function resolveFullVideoUrl({
+        tsUrl,
+        previewM3u8Url
+    }) {
         // 移除无效的服务端请求，直接返回 false
         return false;
     }
@@ -962,71 +1133,123 @@ checkForUpdate();
         return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
     }
 
-    function fireClickSequence(el){
-        try{
+    function fireClickSequence(el) {
+        try {
             const rect = el.getBoundingClientRect();
-            const x = rect.left + Math.min(rect.width*0.6, 10);
-            const y = rect.top + Math.min(rect.height*0.6, 10);
-            const opts = { bubbles:true, cancelable:true, clientX:x, clientY:y };
+            const x = rect.left + Math.min(rect.width * 0.6, 10);
+            const y = rect.top + Math.min(rect.height * 0.6, 10);
+            const opts = {
+                bubbles: true,
+                cancelable: true,
+                clientX: x,
+                clientY: y
+            };
             el.dispatchEvent(new MouseEvent('mouseover', opts));
             el.dispatchEvent(new MouseEvent('mouseenter', opts));
             el.dispatchEvent(new MouseEvent('mousedown', opts));
             el.dispatchEvent(new MouseEvent('mouseup', opts));
             el.dispatchEvent(new MouseEvent('click', opts));
-        }catch(_){}
+        } catch (_) {}
     }
 
-    function lazyViewportWarmup(){
-        try{
-            const sel = ['.video-js','.vjs-player','.vjs','.plyr','#player','.player','.video-container','video'];
+    function lazyViewportWarmup() {
+        try {
+            const sel = ['.video-js', '.vjs-player', '.vjs', '.plyr', '#player', '.player', '.video-container', 'video'];
             const el = document.querySelector(sel.join(','));
             const oldY = window.scrollY;
-            if (el){
-                try{ el.scrollIntoView({block:'center', inline:'center'}); }catch(_){}
+            if (el) {
+                try {
+                    el.scrollIntoView({
+                        block: 'center',
+                        inline: 'center'
+                    });
+                } catch (_) {}
             } else {
-                window.scrollTo({ top: Math.max(0, oldY + 200), behavior: 'auto' });
+                window.scrollTo({
+                    top: Math.max(0, oldY + 200),
+                    behavior: 'auto'
+                });
             }
-            const evs = ['scroll','resize','mousemove','pointermove'];
-            evs.forEach(type=>{ try{ window.dispatchEvent(new Event(type)); }catch(_){ } });
-            if (el){
-                try{
+            const evs = ['scroll', 'resize', 'mousemove', 'pointermove'];
+            evs.forEach(type => {
+                try {
+                    window.dispatchEvent(new Event(type));
+                } catch (_) {}
+            });
+            if (el) {
+                try {
                     const rect = el.getBoundingClientRect();
-                    const opts = { bubbles:true, cancelable:true, clientX:rect.left+5, clientY:rect.top+5 };
+                    const opts = {
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: rect.left + 5,
+                        clientY: rect.top + 5
+                    };
                     el.dispatchEvent(new MouseEvent('mousemove', opts));
                     el.dispatchEvent(new MouseEvent('mouseover', opts));
-                }catch(_){}
+                } catch (_) {}
             }
-            setTimeout(()=>{ try{ window.scrollTo({ top: oldY, behavior: 'auto' }); }catch(_){ } }, 400);
-        }catch(_){}
+            setTimeout(() => {
+                try {
+                    window.scrollTo({
+                        top: oldY,
+                        behavior: 'auto'
+                    });
+                } catch (_) {}
+            }, 400);
+        } catch (_) {}
     }
 
-    function startPreviewWarmup(maxRounds=12, intervalMs=700){
+    function startPreviewWarmup(maxRounds = 12, intervalMs = 700) {
         let round = 0;
-        const runner = async ()=>{
+        const runner = async () => {
             if (isFullReady() || capturedM3u8Url) return;
             if (round >= maxRounds) return;
             round++;
-            try{ const ok = await probePreviewViaApi(); if (ok) return; }catch(_){}
+            try {
+                const ok = await probePreviewViaApi();
+                if (ok) return;
+            } catch (_) {}
             if (probePreviewFromPreviewBtn()) return;
             const domUrl = findM3u8InDom();
-            if (domUrl) { capturedM3u8Url = domUrl; return; }
-            try{ triggerSiteSpecificPreview(); }catch(_){}
-            try{ triggerPreviewButtonClick(); }catch(_){}
+            if (domUrl) {
+                capturedM3u8Url = domUrl;
+                return;
+            }
+            try {
+                triggerSiteSpecificPreview();
+            } catch (_) {}
+            try {
+                triggerPreviewButtonClick();
+            } catch (_) {}
             if (!window.__hj_warmup_stop) setTimeout(runner, intervalMs);
         };
         setTimeout(runner, 400);
     }
 
-    function triggerSiteSpecificPreview(){
-        try{
+    function triggerSiteSpecificPreview() {
+        try {
             if (window.__hj_site_preview_fired) return false;
             const el = document.querySelector('div.pagebox.details .html-box');
             if (!el) return false;
             const rect = el.getBoundingClientRect();
             if (rect.width < 200 || rect.height < 120) return false;
-            try{ el.scrollIntoView({block:'center', inline:'center'}); }catch(_){}
-            const center = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-            const opts = { bubbles:true, cancelable:true, clientX: Math.floor(center.x), clientY: Math.floor(center.y) };
+            try {
+                el.scrollIntoView({
+                    block: 'center',
+                    inline: 'center'
+                });
+            } catch (_) {}
+            const center = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+            const opts = {
+                bubbles: true,
+                cancelable: true,
+                clientX: Math.floor(center.x),
+                clientY: Math.floor(center.y)
+            };
             el.dispatchEvent(new MouseEvent('pointerdown', opts));
             el.dispatchEvent(new MouseEvent('mousedown', opts));
             el.dispatchEvent(new MouseEvent('mouseup', opts));
@@ -1034,10 +1257,12 @@ checkForUpdate();
             el.dispatchEvent(new MouseEvent('click', opts));
             window.__hj_site_preview_fired = true;
             return true;
-        }catch(_){ return false; }
+        } catch (_) {
+            return false;
+        }
     }
 
-       function isExpandButton(element) {
+    function isExpandButton(element) {
         if (!element || !element.tagName) return false;
 
         const tagName = element.tagName.toLowerCase();
@@ -1084,7 +1309,8 @@ checkForUpdate();
 
         return hasExpandText || hasExpandClass || matchesSelector;
     }
-   function autoClickExpandButton() {
+
+    function autoClickExpandButton() {
         const allElements = document.querySelectorAll('button, a, span, div');
         let clickedCount = 0;
 
@@ -1101,20 +1327,29 @@ checkForUpdate();
 
         return clickedCount;
     }
+
     function setupAutoExpandObserver() {
         if (expandObserverSingleton) return expandObserverSingleton;
         let debounceTimer = null;
         const observer = new MutationObserver(function(mutations) {
             let shouldCheck = false;
             for (const mutation of mutations) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) { shouldCheck = true; break; }
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    shouldCheck = true;
+                    break;
+                }
             }
             if (shouldCheck) {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => { autoClickExpandButton(); }, 500);
+                debounceTimer = setTimeout(() => {
+                    autoClickExpandButton();
+                }, 500);
             }
         });
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
         expandObserverSingleton = observer;
         return observer;
     }
@@ -1127,8 +1362,8 @@ checkForUpdate();
             video.dataset.processed = 'true';
             try {
                 const isHidden = video.style.display === 'none' ||
-                                video.offsetParent === null ||
-                                video.dataset.id;
+                    video.offsetParent === null ||
+                    video.dataset.id;
                 if (isHidden) {
                     video.muted = true;
                     video.volume = 0;
@@ -1142,7 +1377,7 @@ checkForUpdate();
                         }).catch(() => {});
                     }, 500);
                 }
-            } catch (error) { }
+            } catch (error) {}
         }
         setTimeout(() => {
             const existingVideos = document.querySelectorAll('video');
@@ -1255,10 +1490,12 @@ checkForUpdate();
         attachPlayHandler();
         attachDownloadHandler();
 
-        if (capturedM3u8Url) { updatePlayButton(); }
+        if (capturedM3u8Url) {
+            updatePlayButton();
+        }
         uiCreated = true;
         const panelEl = document.querySelector('.hj-floating-panel');
-        const rebind = ()=>{
+        const rebind = () => {
             if (panelEl && panelEl.dataset.bound !== '1') setupPanelEvents(panelEl);
             attachPlayHandler();
             attachDownloadHandler();
@@ -1267,7 +1504,7 @@ checkForUpdate();
         window.addEventListener('focus', rebind);
 
         let tries = 0;
-        const readyTicker = setInterval(()=>{
+        const readyTicker = setInterval(() => {
             tries++;
             updatePlayButton();
             attachPlayHandler();
@@ -1330,15 +1567,13 @@ checkForUpdate();
             panel.classList.remove('dragging');
         });
 
-        const onClick = throttle((e)=>{
+        const onClick = throttle((e) => {
             const btn = e.target.closest('.hj-btn');
             if (!btn) return;
             if (btn.id === 'hj-btn-play') {
-                checkForUpdate();
                 return playFullVideo();
             }
             if (btn.id === 'hj-btn-download') {
-                checkForUpdate();
                 return downloadVideo();
             }
             if (btn.id === 'hj-btn-qq') return handleQQGroup();
@@ -1354,7 +1589,7 @@ checkForUpdate();
         if (downloadBtn) downloadBtn.classList.toggle('hj-btn-ready', on);
     }
 
-    async function resolveFullFromServer(payload){
+    async function resolveFullFromServer(payload) {
         // 移除无效的服务端请求，直接返回 null
         return null;
     }
@@ -1372,23 +1607,23 @@ checkForUpdate();
         currentPlayingUrl = null;
     }
 
-    function switchPlayerSource(url){
-        try{
+    function switchPlayerSource(url) {
+        try {
             const overlay = document.getElementById('video-player-overlay');
             if (!overlay || overlay.getAttribute('data-page') !== currentPageUrl) return;
             const v = document.getElementById('hls-video');
-            if (currentHlsInstance){
+            if (currentHlsInstance) {
                 currentHlsInstance.stopLoad?.();
                 currentHlsInstance.loadSource(url);
                 currentHlsInstance.startLoad?.();
                 // 更新当前播放地址
                 currentPlayingUrl = url;
-            } else if (v && v.canPlayType('application/vnd.apple.mpegurl')){
+            } else if (v && v.canPlayType('application/vnd.apple.mpegurl')) {
                 v.src = url;
-                v.play().catch(()=>{});
+                v.play().catch(() => {});
                 currentPlayingUrl = url;
             }
-        }catch(_){ }
+        } catch (_) {}
     }
 
     function playVideoInPage(m3u8Url) {
@@ -1472,10 +1707,15 @@ checkForUpdate();
             }
         `);
 
-        try{ overlay.setAttribute('data-page', currentPageUrl); }catch(_){ }
+        try {
+            overlay.setAttribute('data-page', currentPageUrl);
+        } catch (_) {}
         document.body.appendChild(overlay);
         const closeBtn = document.getElementById('close-player-btn');
-        if (closeBtn && !closeBtn.__hj_bound) { closeBtn.addEventListener('click', destroyPlayer); closeBtn.__hj_bound = true; }
+        if (closeBtn && !closeBtn.__hj_bound) {
+            closeBtn.addEventListener('click', destroyPlayer);
+            closeBtn.__hj_bound = true;
+        }
 
         const videoElement = document.getElementById('hls-video');
 
@@ -1583,73 +1823,76 @@ checkForUpdate();
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
-// 下载弹窗
-async function downloadVideo() {
-    checkForUpdate();
-    // 如果弹窗已经打开，就聚焦
-    const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
-    if (existingModal) {
-        // 滚动到弹窗位置，或只是闪烁一下提示
-        existingModal.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-        showGlobalToast('📥 下载窗口已打开');
-        return;
-    }
-
-    downloadOpen = true;
-
-    // 立即使用当前已有的视频地址显示弹窗（如果有）
-    let initialUrl = lastFullUrl || capturedM3u8Url || null;
-    if (!initialUrl) {
-        showGlobalToast('❌ 未捕获到视频URL，请稍后重试');
-        downloadOpen = false;
-        return;
-    }
-
-    // 立即显示弹窗，避免等待网络请求
-    showDownloadModal(initialUrl, true);  // 第二个参数表示“正在后台获取完整版”
-
-    // 后台异步尝试获取完整版链接（如果有预览版且尚未拿到完整版）
-    if (initialUrl && !isFullReady()) {
-        try {
-            const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
-            const fullUrl = await resolveFullFromServer({
-                pageUrl: location.href,
-                previewM3u8Url: capturedM3u8Url,
-                tsSamples: tsSample
+    // 下载弹窗
+    async function downloadVideo() {
+        checkForUpdate();
+        // 如果弹窗已经打开，就聚焦
+        const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
+        if (existingModal) {
+            // 滚动到弹窗位置，或只是闪烁一下提示
+            existingModal.scrollIntoView?.({
+                behavior: 'smooth',
+                block: 'center'
             });
-            if (fullUrl && fullUrl !== initialUrl) {
-                // 更新弹窗中的 URL
-                const urlTextarea = document.getElementById('hj-download-url');
-                if (urlTextarea) {
-                    urlTextarea.value = fullUrl;
-                    urlTextarea.classList.add('hj-url-updated');
-                    showGlobalToast('✨ 已更新为完整版视频链接');
+            showGlobalToast('📥 下载窗口已打开');
+            return;
+        }
+
+        downloadOpen = true;
+
+        // 立即使用当前已有的视频地址显示弹窗（如果有）
+        let initialUrl = lastFullUrl || capturedM3u8Url || null;
+        if (!initialUrl) {
+            showGlobalToast('❌ 未捕获到视频URL，请稍后重试');
+            downloadOpen = false;
+            return;
+        }
+
+        // 立即显示弹窗，避免等待网络请求
+        showDownloadModal(initialUrl, true); // 第二个参数表示“正在后台获取完整版”
+
+        // 后台异步尝试获取完整版链接（如果有预览版且尚未拿到完整版）
+        if (initialUrl && !isFullReady()) {
+            try {
+                const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
+                const fullUrl = await resolveFullFromServer({
+                    pageUrl: location.href,
+                    previewM3u8Url: capturedM3u8Url,
+                    tsSamples: tsSample
+                });
+                if (fullUrl && fullUrl !== initialUrl) {
+                    // 更新弹窗中的 URL
+                    const urlTextarea = document.getElementById('hj-download-url');
+                    if (urlTextarea) {
+                        urlTextarea.value = fullUrl;
+                        urlTextarea.classList.add('hj-url-updated');
+                        showGlobalToast('✨ 已更新为完整版视频链接');
+                    }
+                    // 同时更新全局变量
+                    lastFullUrl = fullUrl;
+                    capturedM3u8Url = fullUrl;
+                    sigFull = currentSig();
+                    sigCaptured = currentSig();
+                    updateStrictUi();
                 }
-                // 同时更新全局变量
-                lastFullUrl = fullUrl;
-                capturedM3u8Url = fullUrl;
-                sigFull = currentSig();
-                sigCaptured = currentSig();
-                updateStrictUi();
-            }
-        } catch (_) {}
+            } catch (_) {}
+        }
     }
-}
 
-// 弹窗显示
-function showDownloadModal(displayUrl, isLoading = false) {
-    // 如果已存在则直接返回
-    const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
-    if (existingModal) return;
+    // 弹窗显示
+    function showDownloadModal(displayUrl, isLoading = false) {
+        // 如果已存在则直接返回
+        const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
+        if (existingModal) return;
 
-    const modal = document.createElement('div');
-    modal.className = 'hj-modal-overlay';
-    modal.setAttribute('data-type', 'download');
-    modal.style.zIndex = '1000005';
+        const modal = document.createElement('div');
+        modal.className = 'hj-modal-overlay';
+        modal.setAttribute('data-type', 'download');
+        modal.style.zIndex = '1000005';
 
-    const loadingHint = isLoading ? '<div style="font-size:12px; margin-top:6px; color: #ffd966;">⏳ 后台正在获取完整版链接，会自动更新...</div>' : '';
+        const loadingHint = isLoading ? '<div style="font-size:12px; margin-top:6px; color: #ffd966;">⏳ 后台正在获取完整版链接，会自动更新...</div>' : '';
 
-    modal.innerHTML = `
+        modal.innerHTML = `
         <div class="hj-modal" style="max-width: 600px;">
             <div class="hj-modal-title">📥 视频下载</div>
             <div class="hj-modal-content">
@@ -1669,153 +1912,189 @@ function showDownloadModal(displayUrl, isLoading = false) {
             </div>
         </div>`;
 
-    document.body.appendChild(modal);
+        document.body.appendChild(modal);
 
-    const closeModal = () => {
-        if (modal && modal.remove) {
-            modal.remove();
+        const closeModal = () => {
+            if (modal && modal.remove) {
+                modal.remove();
+            }
+            downloadOpen = false;
+            setPanelModalMode(false);
+            ensurePanelVisible();
+        };
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        const copyBtn = document.getElementById('hj-download-copy');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const val = document.getElementById('hj-download-url')?.value || '';
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(val).then(() => {
+                        showGlobalToast('✅ 链接已复制成功');
+                    }).catch(() => {
+                        showGlobalToast('❌ 复制失败，请手动复制', true);
+                    });
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = val;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showGlobalToast('✅ 链接已复制');
+                }
+            });
         }
-        downloadOpen = false;
-        setPanelModalMode(false);
-        ensurePanelVisible();
-    };
 
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
+        const goBtn = document.getElementById('hj-download-go');
+        if (goBtn) {
+            goBtn.addEventListener('click', () => {
+                const val = document.getElementById('hj-download-url')?.value || '';
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(val).catch(() => {});
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = val;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+                window.open('https://getm3u8.com/?source=' + val, '_blank');
+                closeModal();
+            });
+        }
 
-    const copyBtn = document.getElementById('hj-download-copy');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            const val = document.getElementById('hj-download-url')?.value || '';
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(val).then(() => {
-                    showGlobalToast('✅ 链接已复制成功');
-                }).catch(() => {
-                    showGlobalToast('❌ 复制失败，请手动复制', true);
-                });
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = val;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showGlobalToast('✅ 链接已复制');
-            }
-        });
+        const closeBtn = document.getElementById('hj-download-close');
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+        setPanelModalMode(true);
     }
-
-    const goBtn = document.getElementById('hj-download-go');
-    if (goBtn) {
-        goBtn.addEventListener('click', () => {
-            const val = document.getElementById('hj-download-url')?.value || '';
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(val).catch(() => {});
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = val;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-            }
-            window.open('https://getm3u8.com/?source=' + val, '_blank');
-            closeModal();
-        });
-    }
-
-    const closeBtn = document.getElementById('hj-download-close');
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-
-    setPanelModalMode(true);
-}
-    async function playFullVideo(allowPreview=false){
+    async function playFullVideo(allowPreview = false) {
         checkForUpdate();
 
         if (inFlightPlay) return;
         inFlightPlay = true;
-        try{
+        try {
             const epochAtStart = resolveEpoch;
             const pageAtStart = currentPageUrl;
 
-            if (!capturedM3u8Url){
+            if (!capturedM3u8Url) {
                 showGlobalToast('正在定位视频源…');
                 const domUrl = findM3u8InDom();
-                if (domUrl) { capturedM3u8Url = domUrl; }
+                if (domUrl) {
+                    capturedM3u8Url = domUrl;
+                }
                 await ensurePreviewTriggered(8, 500);
                 let waited = 0;
-                await new Promise(resolve=>{
-                    const t = setInterval(()=>{
+                await new Promise(resolve => {
+                    const t = setInterval(() => {
                         waited += 300;
-                        if (capturedM3u8Url){ clearInterval(t); resolve(); }
-                        else if (waited >= 8000){ clearInterval(t); resolve(); }
-                    },300);
+                        if (capturedM3u8Url) {
+                            clearInterval(t);
+                            resolve();
+                        } else if (waited >= 8000) {
+                            clearInterval(t);
+                            resolve();
+                        }
+                    }, 300);
                 });
-                if (!capturedM3u8Url || sigCaptured!==currentSig()){ showGlobalToast('未捕获到视频地址，请稍后重试'); inFlightPlay = false; return; }
+                if (!capturedM3u8Url || sigCaptured !== currentSig()) {
+                    showGlobalToast('未捕获到视频地址，请稍后重试');
+                    inFlightPlay = false;
+                    return;
+                }
             }
             const preferred = await ensureFullBeforePlay(6000);
-            if (STRICT_MODE && !preferred){
-                if (!(allowPreview && capturedM3u8Url && sigCaptured===currentSig())){
-                    showGlobalToast('视频还在解析中，请等几秒钟哦~'); inFlightPlay = false; return;
+            if (STRICT_MODE && !preferred) {
+                if (!(allowPreview && capturedM3u8Url && sigCaptured === currentSig())) {
+                    showGlobalToast('视频还在解析中，请等几秒钟哦~');
+                    inFlightPlay = false;
+                    return;
                 }
             }
-            if (epochAtStart !== resolveEpoch || pageAtStart !== currentPageUrl) { inFlightPlay = false; return; }
+            if (epochAtStart !== resolveEpoch || pageAtStart !== currentPageUrl) {
+                inFlightPlay = false;
+                return;
+            }
             playVideoInPage(preferred || capturedM3u8Url);
 
-            try{
-                const tsSample = (capturedTsUrls && capturedTsUrls.length>0) ? [capturedTsUrls[0]] : [];
+            try {
+                const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
                 let fullUrl = await Promise.race([
-                    resolveFullFromServer({ pageUrl: location.href, previewM3u8Url: capturedM3u8Url, tsSamples: tsSample }),
-                    new Promise((res)=>setTimeout(()=>res(null), 9000))
+                    resolveFullFromServer({
+                        pageUrl: location.href,
+                        previewM3u8Url: capturedM3u8Url,
+                        tsSamples: tsSample
+                    }),
+                    new Promise((res) => setTimeout(() => res(null), 9000))
                 ]);
-                if (!fullUrl && capturedM3u8Url && sigCaptured===currentSig()){
-                    fullUrl = await localGuessFullM3U8(capturedM3u8Url, tsSample[0]||'');
+                if (!fullUrl && capturedM3u8Url && sigCaptured === currentSig()) {
+                    fullUrl = await localGuessFullM3U8(capturedM3u8Url, tsSample[0] || '');
                 }
-                if (fullUrl){
-                    if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl){
-                        lastFullUrl = fullUrl; sigFull = currentSig();
-                        capturedM3u8Url = fullUrl; sigCaptured = currentSig();
+                if (fullUrl) {
+                    if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) {
+                        lastFullUrl = fullUrl;
+                        sigFull = currentSig();
+                        capturedM3u8Url = fullUrl;
+                        sigCaptured = currentSig();
                         switchPlayerSource(fullUrl);
                         parsingPending = false;
                         updateStrictUi();
                     }
                 }
-            }catch(_){ }
+            } catch (_) {}
         } finally {
             inFlightPlay = false;
         }
     }
 
-    async function localGuessFullM3U8(previewUrl, ts0){
-        try{
+    async function localGuessFullM3U8(previewUrl, ts0) {
+        try {
             const out = [];
-            if (previewUrl){
-                out.push(previewUrl.replace(/_preview/ig,'').replace(/\?[^#]*$/,''));
+            if (previewUrl) {
+                out.push(previewUrl.replace(/_preview/ig, '').replace(/\?[^#]*$/, ''));
             }
-            if (ts0){
-                try{
+            if (ts0) {
+                try {
                     const u = new URL(ts0);
                     const base = u.href.substring(0, u.href.lastIndexOf('/') + 1);
-                    const m = /([^\/]+)_i\d+\.ts$/i.exec(u.pathname||'');
+                    const m = /([^\/]+)_i\d+\.ts$/i.exec(u.pathname || '');
                     if (m && m[1]) out.push(base + m[1] + '_i.m3u8');
-                    ['index.m3u8','master.m3u8','playlist.m3u8','main.m3u8','video.m3u8','prog_index.m3u8']
-                        .forEach(n=> out.push(base+n));
-                }catch(_){}
+                    ['index.m3u8', 'master.m3u8', 'playlist.m3u8', 'main.m3u8', 'video.m3u8', 'prog_index.m3u8']
+                    .forEach(n => out.push(base + n));
+                } catch (_) {}
             }
             const cand = Array.from(new Set(out)).filter(Boolean);
-            for (const url of cand){
-                try{
-                    const r = await fetch(url, { method:'GET', headers: { 'Referer': document.referrer || location.href } });
-                    if (r.ok){ const t = await r.text(); if (t && t.includes('#EXTM3U')) return url; }
-                }catch(_){}
+            for (const url of cand) {
+                try {
+                    const r = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Referer': document.referrer || location.href
+                        }
+                    });
+                    if (r.ok) {
+                        const t = await r.text();
+                        if (t && t.includes('#EXTM3U')) return url;
+                    }
+                } catch (_) {}
             }
-        }catch(_){}
+        } catch (_) {}
         return null;
     }
 
     let currentPageUrl = window.location.href;
-    let lastTopicId = (function(){ try{ return getTopicIdFromUrl(); }catch(_){ return null; } })();
+    let lastTopicId = (function() {
+        try {
+            return getTopicIdFromUrl();
+        } catch (_) {
+            return null;
+        }
+    })();
 
     // 自动展开面板
     function expandPanelOnTopicPage() {
@@ -1834,32 +2113,45 @@ function showDownloadModal(displayUrl, isLoading = false) {
         const changed = (newUrl !== currentPageUrl);
         if (!changed) return;
         currentPageUrl = newUrl;
-        try{ lastTopicId = getTopicIdFromUrl(); }catch(_){ }
+        try {
+            lastTopicId = getTopicIdFromUrl();
+        } catch (_) {}
 
         destroyPlayer();
 
         capturedTsUrls = [];
-        capturedM3u8Url = null; sigCaptured = ''; sigFull = '';
+        capturedM3u8Url = null;
+        sigCaptured = '';
+        sigFull = '';
         lastResolvedPageUrl = '';
         lastFullUrl = null;
         parsingPending = true;
         resolveEpoch++;
         stopResolveWatchdog();
         window.__hj_warmup_stop = false;
-        try{ if (resolveCache && resolveCache.clear) resolveCache.clear(); }catch(_){ }
+        try {
+            if (resolveCache && resolveCache.clear) resolveCache.clear();
+        } catch (_) {}
         updatePlayButton();
         updateStrictUi();
 
-        setTimeout(() => { autoClickExpandButton(); autoTriggerVideoPreview(); }, 800);
+        setTimeout(() => {
+            autoClickExpandButton();
+            autoTriggerVideoPreview();
+        }, 800);
         const isTopic = newUrl.includes('/topic/') || newUrl.includes('/post/details') || window.location.hash.includes('/topic/');
         if (isTopic) {
             startPreviewWarmup();
             // 延迟执行自动展开，确保DOM已渲染
             setTimeout(() => expandPanelOnTopicPage(), 3000);
         }
-        if (isTopic) setTimeout(()=>{ try{ startBackgroundResolve(); }catch(_){ } }, 1200);
+        if (isTopic) setTimeout(() => {
+            try {
+                startBackgroundResolve();
+            } catch (_) {}
+        }, 1200);
         if (isTopic) startResolveWatchdog();
-        if (isTopic) setTimeout(()=>lazyViewportWarmup(), 600);
+        if (isTopic) setTimeout(() => lazyViewportWarmup(), 600);
         setupHlsHook();
         setupPerfObserver();
         startPanelWatchdog();
@@ -1868,58 +2160,106 @@ function showDownloadModal(displayUrl, isLoading = false) {
     function setupPageChangeListener() {
         window.addEventListener('hashchange', onPageChange);
         window.addEventListener('popstate', onPageChange);
-        const observer = new MutationObserver(() => { onPageChange(); });
-        observer.observe(document.body, { childList: true, subtree: true });
+        const observer = new MutationObserver(() => {
+            onPageChange();
+        });
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
-    function setupPreNavigationGuard(){
-        try{
-            const handler = (e)=>{
-                try{
+    function setupPreNavigationGuard() {
+        try {
+            const handler = (e) => {
+                try {
                     const a = (e.target && e.target.closest) ? e.target.closest('a[href]') : null;
                     if (!a) return;
-                    const href = a.getAttribute('href')||'';
+                    const href = a.getAttribute('href') || '';
                     if (!href) return;
-                    const abs = href.startsWith('http')? href : new URL(href, location.href).href;
+                    const abs = href.startsWith('http') ? href : new URL(href, location.href).href;
                     if (abs === location.href) return;
-                    if (/(\/topic\/\d+|\/post\/details)/.test(abs)){
-                        try{ destroyPlayer(); }catch(_){ }
-                        try{ capturedTsUrls = []; capturedM3u8Url = null; sigCaptured=''; sigFull=''; lastFullUrl = null; parsingPending = true; }catch(_){ }
-                        try{ resolveEpoch++; updatePlayButton(); updateStrictUi(); }catch(_){ }
+                    if (/(\/topic\/\d+|\/post\/details)/.test(abs)) {
+                        try {
+                            destroyPlayer();
+                        } catch (_) {}
+                        try {
+                            capturedTsUrls = [];
+                            capturedM3u8Url = null;
+                            sigCaptured = '';
+                            sigFull = '';
+                            lastFullUrl = null;
+                            parsingPending = true;
+                        } catch (_) {}
+                        try {
+                            resolveEpoch++;
+                            updatePlayButton();
+                            updateStrictUi();
+                        } catch (_) {}
                     }
-                }catch(_){ }
+                } catch (_) {}
             };
             document.addEventListener('mousedown', handler, true);
             document.addEventListener('click', handler, true);
-            document.addEventListener('touchstart', handler, { capture:true, passive:true });
-        }catch(_){ }
+            document.addEventListener('touchstart', handler, {
+                capture: true,
+                passive: true
+            });
+        } catch (_) {}
     }
 
-    function isTopicPageNow(){
-        try{
+    function isTopicPageNow() {
+        try {
             const href = window.location.href;
             return href.includes('/topic/') || href.includes('/post/details') || window.location.hash.include('topic/');
-        }catch(_){ return false; }
+        } catch (_) {
+            return false;
+        }
     }
 
-    function hookHistory(){
-        try{
+    function hookHistory() {
+        try {
             const origPush = history.pushState;
             const origReplace = history.replaceState;
-            const preResetIfGoingToDetail = (urlLike)=>{
-                try{
-                    const next = (typeof urlLike==='string')? new URL(urlLike, location.href).href : (urlLike && urlLike.href) || null;
+            const preResetIfGoingToDetail = (urlLike) => {
+                try {
+                    const next = (typeof urlLike === 'string') ? new URL(urlLike, location.href).href : (urlLike && urlLike.href) || null;
                     if (!next) return;
-                    if (/(\/topic\/\d+|\/post\/details)/.test(next) && next!==location.href){
-                        try{ destroyPlayer(); }catch(_){ }
-                        try{ capturedTsUrls = []; capturedM3u8Url = null; lastFullUrl = null; parsingPending = true; }catch(_){ }
-                        try{ resolveEpoch++; updatePlayButton(); updateStrictUi(); }catch(_){ }
+                    if (/(\/topic\/\d+|\/post\/details)/.test(next) && next !== location.href) {
+                        try {
+                            destroyPlayer();
+                        } catch (_) {}
+                        try {
+                            capturedTsUrls = [];
+                            capturedM3u8Url = null;
+                            lastFullUrl = null;
+                            parsingPending = true;
+                        } catch (_) {}
+                        try {
+                            resolveEpoch++;
+                            updatePlayButton();
+                            updateStrictUi();
+                        } catch (_) {}
                     }
-                }catch(_){ }
+                } catch (_) {}
             };
-            history.pushState = function(state, title, url){ preResetIfGoingToDetail(url); const r = origPush.apply(this, arguments); try{ onPageChange(); }catch(_){ } return r; };
-            history.replaceState = function(state, title, url){ preResetIfGoingToDetail(url); const r = origReplace.apply(this, arguments); try{ onPageChange(); }catch(_){ } return r; };
-        }catch(_){ }
+            history.pushState = function(state, title, url) {
+                preResetIfGoingToDetail(url);
+                const r = origPush.apply(this, arguments);
+                try {
+                    onPageChange();
+                } catch (_) {}
+                return r;
+            };
+            history.replaceState = function(state, title, url) {
+                preResetIfGoingToDetail(url);
+                const r = origReplace.apply(this, arguments);
+                try {
+                    onPageChange();
+                } catch (_) {}
+                return r;
+            };
+        } catch (_) {}
     }
 
     function ensurePreviewTriggered(maxAttempts, intervalMs) {
@@ -1942,9 +2282,8 @@ function showDownloadModal(displayUrl, isLoading = false) {
     }
 
     function init() {
+        checkForUpdate()
         checkLocalVersionUpdate();
-        checkForUpdate();
-
         setupApiInterceptor();
         setupXHROpenHook();
         setupTsCapture();
@@ -1965,8 +2304,8 @@ function showDownloadModal(displayUrl, isLoading = false) {
                 startPanelWatchdog();
 
                 const isTopicPage = window.location.href.includes('/topic/') ||
-                                   window.location.hash.includes('/topic/') ||
-                                   window.location.href.includes('/post/details');
+                    window.location.hash.includes('/topic/') ||
+                    window.location.href.includes('/post/details');
 
                 if (isTopicPage) {
                     setTimeout(() => {
@@ -1976,9 +2315,13 @@ function showDownloadModal(displayUrl, isLoading = false) {
 
                     setupAutoExpandObserver();
                     startPreviewWarmup();
-                    setTimeout(()=>{ try{ startBackgroundResolve(); }catch(_){ } }, 1200);
+                    setTimeout(() => {
+                        try {
+                            startBackgroundResolve();
+                        } catch (_) {}
+                    }, 1200);
                     startResolveWatchdog();
-                    setTimeout(()=>lazyViewportWarmup(), 800);
+                    setTimeout(() => lazyViewportWarmup(), 800);
                     updateStrictUi();
 
                     // 进入帖子页面时，自动展开面板
@@ -1996,8 +2339,8 @@ function showDownloadModal(displayUrl, isLoading = false) {
             startPanelWatchdog();
 
             const isTopicPage = window.location.href.includes('/topic/') ||
-                               window.location.hash.includes('/topic/') ||
-                               window.location.href.includes('/post/details');
+                window.location.hash.includes('/topic/') ||
+                window.location.href.includes('/post/details');
 
             if (isTopicPage) {
                 setTimeout(() => {
@@ -2007,7 +2350,7 @@ function showDownloadModal(displayUrl, isLoading = false) {
 
                 setupAutoExpandObserver();
                 startPreviewWarmup();
-                setTimeout(()=>lazyViewportWarmup(), 800);
+                setTimeout(() => lazyViewportWarmup(), 800);
                 updateStrictUi();
 
                 // 进入帖子页面时，自动展开面板
