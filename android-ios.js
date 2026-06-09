@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.12
+// @version      1.1.13
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者703860120
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -1041,7 +1041,7 @@
     }
 
     function handleQQGroup() {
-        window.open('https://qm.qq.com/cgi-bin/qm/qr?k=BBh2_32dpkw0DDb3PJRnP1J-pPW96Lhv&jump_from=webapi&authKey=n0jSy+OWeCJWtRl8kE05d6hGoZzRropB0QpoInmoALz1WIpg+0L22Uu48OD9KbPM', '_blank');
+        window.open('https://qm.qq.com/cgi-bin/qm/qr?k=sAIz2xHv-E-4PX5q3CHD_rY5txeGuyfP&jump_from=webapi&authKey=cVUoUVKelOP+VWD+ZPAT9V+wwWWBZCBzL61fjex8FmgEr+8yt3oRSzzihHokbmRQ', '_blank');
     }
 
     function attachStrictHandlers() {
@@ -1453,7 +1453,7 @@
                             </svg>
                         </button>
                         <button class="hj-btn hj-btn-qq" id="hj-btn-qq" title="联系作者">
-    <img src="https://p.qpic.cn/qqconadmin/0/b095d8d0ad144de3943f5dcba95a9624/0"style="width:50px; height:27px;">
+    <img src="//pub.idqqimg.com/wpa/images/group.png"style="width:50px; height:27px;">
 </button>
                     </div>
                 </div>
