@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.14
+// @version      1.1.15
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -31,9 +31,12 @@
     const SCRIPT_VERSION = getCurrentVersion();
     const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
 
-    //
+    // 公告
+    const ANNOUNCEMENT_URL = 'https://gist.githubusercontent.com/BIN-03/ff5cd09874cba6c1a8a352bf27b6067f/raw/Official_announcement.json';
+
     let hlsLoaded = false;
     let hlsLoading = false;
+
     function loadHls() {
         return new Promise((resolve, reject) => {
             if (typeof Hls !== 'undefined') {
@@ -66,7 +69,202 @@
             document.head.appendChild(script);
         });
     }
-    //
+
+    // 公告功能
+    function showAnnouncementToast(text) {
+        const existing = document.getElementById('hj-announcement-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'hj-announcement-toast';
+        toast.textContent = text;
+        toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 500;
+        z-index: 1000010;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: hjToastFadeInOut 2s ease forwards;
+        pointer-events: none;
+        white-space: nowrap;
+    `;
+
+        if (!document.getElementById('hj-toast-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'hj-toast-animation-style';
+            style.textContent = `
+            @keyframes hjToastFadeInOut {
+                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); visibility: hidden; }
+            }
+        `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast && toast.remove) toast.remove();
+        }, 2000);
+    }
+
+    async function fetchAnnouncement() {
+        try {
+            const url = ANNOUNCEMENT_URL + '?_=' + Date.now();
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const currentContent = GM_getValue('announcement_content', '');
+
+                if (data.content && data.content !== currentContent) {
+                    GM_setValue('announcement_content', data.content);
+                    GM_setValue('announcement_time', data.time || '');
+                    GM_setValue('announcement_read', false);
+                    setTimeout(() => {
+                        updateAnnouncementBadge();
+                    }, 300);
+                    showAnnouncementToast('📢 有新公告');
+                }
+                return data;
+            }
+        } catch (e) {
+            console.error('获取公告失败', e);
+        }
+        return null;
+    }
+
+    function setupAnnouncementCheck() {
+        setTimeout(() => {
+            fetchAnnouncement();
+        }, 1500);
+
+        // 每5秒检查一次
+        setInterval(() => {
+            fetchAnnouncement();
+        }, 5000);
+    }
+
+    function updateAnnouncementBadge() {
+        const btn = document.getElementById('hj-btn-announcement');
+        if (!btn) {
+            setTimeout(() => {
+                updateAnnouncementBadge();
+            }, 500);
+            return;
+        }
+
+        const read = GM_getValue('announcement_read', false);
+        const hasContent = GM_getValue('announcement_content', '');
+
+        const oldBadge = btn.querySelector('.hj-badge');
+        if (oldBadge) oldBadge.remove();
+
+        if (hasContent && !read) {
+            const badge = document.createElement('span');
+            badge.className = 'hj-badge';
+            badge.textContent = '1';
+            badge.style.cssText = `
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            background: #ff4757;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(255, 71, 87, 0.5);
+            animation: hjBadgePulse 2s infinite;
+            z-index: 100;
+        `;
+            btn.style.position = 'relative';
+            btn.appendChild(badge);
+        }
+    }
+
+    function showAnnouncementModal() {
+        const content = GM_getValue('announcement_content', '');
+        const time = GM_getValue('announcement_time', '');
+
+        if (!content) {
+            showGlobalToast('暂无公告');
+            return;
+        }
+
+        GM_setValue('announcement_read', true);
+        updateAnnouncementBadge();
+
+        const existing = document.querySelector('.hj-modal-overlay[data-type="announcement"]');
+        if (existing) {
+            existing.scrollIntoView?.({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'hj-modal-overlay';
+        modal.setAttribute('data-type', 'announcement');
+        modal.style.zIndex = '1000006';
+
+        modal.innerHTML = `
+            <div class="hj-modal" style="max-width: 500px;">
+                <div class="hj-modal-title">📢 公告</div>
+                <div class="hj-modal-content" style="text-align: left; max-height: 300px; overflow-y: auto;">
+                    <div style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; font-size: 14px; color: rgba(255,255,255,0.95);">
+                        ${escapeHtml(content)}
+                    </div>
+                    ${time ? `<div style="margin-top: 12px; text-align: right; font-size: 12px; color: rgba(255,255,255,0.6);">📅 ${escapeHtml(time)}</div>` : ''}
+                </div>
+                <div class="hj-modal-actions">
+                    <button class="hj-modal-btn hj-modal-btn-primary" id="hj-announcement-close" style="width:100%;">知道了</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                setPanelModalMode(false);
+                ensurePanelVisible();
+            }
+        });
+
+        document.getElementById('hj-announcement-close')?.addEventListener('click', () => {
+            modal.remove();
+            setPanelModalMode(false);
+            ensurePanelVisible();
+        });
+
+        setPanelModalMode(true);
+    }
+
+    function setupAnnouncementCheck() {
+        setTimeout(() => {
+            fetchAnnouncement();
+        }, 1500);
+        setInterval(() => {
+            fetchAnnouncement();
+        }, 300000);
+    }
+    // ----- 公告功能结束 -----
 
     async function getLatestVersionFromGitHub() {
         try {
@@ -143,16 +341,6 @@
             <div style="font-size:14px;opacity:0.9;">v${newVersion}（当前 v${SCRIPT_VERSION}）</div>
         </div>
         <div style="display:flex;gap:10px;width:100%;flex-wrap:wrap;">
-            <button id="hj-copy-update-btn" style="
-                background:#4facfe;
-                border:none;
-                color:white;
-                padding:10px 0;
-                border-radius:8px;
-                cursor:pointer;
-                font-size:14px;
-                flex:1;
-            ">复制更新链接</button>
             <button id="hj-update-now-btn" style="
                 background:#43e97b;
                 border:none;
@@ -176,28 +364,8 @@
         </div>
     `;
         document.body.appendChild(notification);
-
-        document.getElementById('hj-copy-update-btn')?.addEventListener('click', () => {
-            const updateUrl = GITHUB_VERSION_URL + '?_=' + Date.now();
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(updateUrl).then(() => {
-                    showGlobalToast('✅ 更新链接已复制');
-                }).catch(() => {
-                    showGlobalToast('❌ 复制失败，请手动复制', true);
-                });
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = updateUrl;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showGlobalToast('✅ 更新链接已复制');
-            }
-        });
-
         document.getElementById('hj-update-now-btn')?.addEventListener('click', () => {
-            const confirmed = confirm('⚠️跳转安装页面后\n如未自动安装，请手动“复制更新链接”去脚本页面导入\n安装成功后请重启浏览器⚠️');
+            const confirmed = confirm('⚠️安卓/鸿蒙用户需知！⚠️\n请前往"设置—脚本页面"点击右上"更新"按钮手动更新');
             if (confirmed) {
                 window.open(GITHUB_VERSION_URL + '?_=' + Date.now(), '_blank');
                 notification.remove();
@@ -1444,7 +1612,9 @@
             .hj-btn:disabled { background: rgba(150, 150, 150, 0.3) !important; cursor: not-allowed; transform: none !important; opacity: 0.6; }
             .hj-btn svg { width: 24px; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
             .hj-btn-ready::after { content: ''; position: absolute; top: 8px; left: 8px; width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.3), 0 2px 8px rgba(74, 222, 128, 0.5); animation: statusPulse 2s infinite; }
+            .hj-btn-announcement { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; }
             @keyframes statusPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
+            @keyframes hjBadgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
             .hj-btn-play { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
             .hj-btn-download { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
             .hj-btn-qq { background: linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%) !important; }
@@ -1489,9 +1659,16 @@
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
                         </button>
+                        <button class="hj-btn hj-btn-announcement" id="hj-btn-announcement" title="公告">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                                <circle cx="12" cy="4" r="1" fill="white"/>
+                            </svg>
+                        </button>
                         <button class="hj-btn hj-btn-qq" id="hj-btn-qq" title="联系作者">
-    <img src="//pub.idqqimg.com/wpa/images/group.png"style="width:61px; height:30px;">
-</button>
+                            <img src="//pub.idqqimg.com/wpa/images/group.png" style="width:61px; height:30px;">
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1501,6 +1678,23 @@
         setupPanelEvents(panel);
         attachPlayHandler();
         attachDownloadHandler();
+
+        // 绑定公告按钮事件
+        const announceBtn = document.getElementById('hj-btn-announcement');
+        if (announceBtn) {
+            announceBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                showAnnouncementModal();
+            });
+            console.log('✅ 公告按钮已绑定');
+        }
+
+        setTimeout(() => {
+            console.log('🔄 尝试更新公告标记...');
+            updateAnnouncementBadge();
+        }, 500);
+
         if (capturedM3u8Url) {
             updatePlayButton();
         }
@@ -1575,6 +1769,9 @@
             if (btn.id === 'hj-btn-download') {
                 return downloadVideo();
             }
+            if (btn.id === 'hj-btn-announcement') {
+                return;
+            }
             if (btn.id === 'hj-btn-qq') return handleQQGroup();
         }, 300);
         panel.addEventListener('click', onClick);
@@ -1622,85 +1819,84 @@
         } catch (_) {}
     }
 
-    // ---------- 修复：异步播放函数，动态加载 HLS ----------
     async function playVideoInPage(m3u8Url) {
         destroyPlayer();
         const overlay = document.createElement('div');
         overlay.id = 'video-player-overlay';
         overlay.innerHTML = `
-            <div class="video-player-container">
-                <div class="video-header">
-                    <h3>🎬 完整视频播放</h3>
-                    <button class="close-btn" id="close-player-btn">✕</button>
-                </div>
-                <div class="video-tips">💡 如果视频不能正常播放请检查您的网络环境，支持拖动，倍速播放哦~</div>
-                <video id="hls-video" controls autoplay style="width:100%;max-height:70vh;background:#000;">
-                    您的浏览器不支持视频播放
-                </video>
+        <div class="video-player-container">
+            <div class="video-header">
+                <h3>🎬 完整视频播放</h3>
+                <button class="close-btn" id="close-player-btn">✕</button>
             </div>
-        `;
+            <div class="video-tips">💡 如果视频不能正常播放请检查您的网络环境，支持拖动，倍速播放哦~</div>
+            <video id="hls-video" controls autoplay style="width:100%;max-height:70vh;background:#000;">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+    `;
         GM_addStyle(`
-            #video-player-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.95);
-                z-index: 99999;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            .video-player-container {
-                background: white;
-                border-radius: 15px;
-                padding: 20px;
-                max-width: 90%;
-                box-shadow: 0 10px 50px rgba(0,0,0,0.5);
-            }
-            .video-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-            }
-            .video-header h3 {
-                margin: 0;
-                color: #333;
-                font-size: 16px;
-                font-weight: 600;
-            }
-            .video-tips {
-                font-size: 12px;
-                color: #666;
-                text-align: center;
-                margin-bottom: 12px;
-                padding: 8px 12px;
-                background: #f8f9fa;
-                border-radius: 8px;
-                line-height: 1.5;
-            }
-            .close-btn {
-                background: #ff4757;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                width: 35px;
-                height: 35px;
-                font-size: 20px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            .close-btn:hover {
-                background: #ff3838;
-                transform: scale(1.1);
-            }
-            #hls-video {
-                cursor: pointer;
-                user-select: none;
-            }
-        `);
+        #video-player-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 99999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .video-player-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 90%;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+        }
+        .video-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .video-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .video-tips {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+        .close-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .close-btn:hover {
+            background: #ff3838;
+            transform: scale(1.1);
+        }
+        #hls-video {
+            cursor: pointer;
+            user-select: none;
+        }
+    `);
         try {
             overlay.setAttribute('data-page', currentPageUrl);
         } catch (_) {}
@@ -1712,7 +1908,6 @@
         }
 
         const videoElement = document.getElementById('hls-video');
-        // 绑定拖拽、长按等交互（原代码不变）
         let isDraggingVideo = false;
         let dragStartX = 0;
         let dragStartTime = 0;
@@ -1783,12 +1978,10 @@
             clearInterval(longPressInterval);
         });
 
-        // ----- 加载 HLS.js 并初始化播放器 -----
         try {
             await loadHls();
         } catch (e) {
             console.warn('HLS.js 加载失败，尝试直接播放', e);
-            // 降级：直接设置 video.src（仅 Safari 有效）
             if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
                 videoElement.src = m3u8Url;
                 videoElement.play().catch(() => {});
@@ -1822,7 +2015,6 @@
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
-    // -----------------------------------------
 
     async function downloadVideo() {
         const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
@@ -1911,11 +2103,7 @@
             copyBtn.addEventListener('click', () => {
                 const val = document.getElementById('hj-download-url')?.value || '';
                 if (navigator.clipboard) {
-                    navigator.clipboard.writeText(val).then(() => {
-                        showGlobalToast('✅ 链接已复制成功');
-                    }).catch(() => {
-                        showGlobalToast('❌ 复制失败，请手动复制', true);
-                    });
+                    navigator.clipboard.writeText(val);
                 } else {
                     const textarea = document.createElement('textarea');
                     textarea.value = val;
@@ -1923,8 +2111,8 @@
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
-                    showGlobalToast('✅ 链接已复制');
                 }
+                showGlobalToast('✅ 链接已复制');
             });
         }
         const goBtn = document.getElementById('hj-download-go');
@@ -1950,7 +2138,6 @@
         setPanelModalMode(true);
     }
 
-    // ---------- 修复：playFullVideo 中 await playVideoInPage ----------
     async function playFullVideo(allowPreview = false) {
         if (inFlightPlay) return;
         inFlightPlay = true;
@@ -1995,7 +2182,6 @@
                 inFlightPlay = false;
                 return;
             }
-            // 异步等待播放器创建完成
             await playVideoInPage(preferred || capturedM3u8Url);
             try {
                 const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
@@ -2026,7 +2212,6 @@
             inFlightPlay = false;
         }
     }
-    // -----------------------------------------
 
     async function localGuessFullM3U8(previewUrl, ts0) {
         try {
@@ -2086,6 +2271,8 @@
         const newUrl = window.location.href;
         const changed = (newUrl !== currentPageUrl);
         if (!changed) return;
+        console.log('🔄 页面切换:', newUrl);
+
         currentPageUrl = newUrl;
         try {
             lastTopicId = getTopicIdFromUrl();
@@ -2114,7 +2301,6 @@
         if (isTopic) {
             startPreviewWarmup();
             setTimeout(() => expandPanelOnTopicPage(), 3000);
-            // 每次进入帖子页面检测更新
             setTimeout(() => forceCheckUpdateForTopic(), 500);
         }
         if (isTopic) setTimeout(() => {
@@ -2127,19 +2313,10 @@
         setupHlsHook();
         setupPerfObserver();
         startPanelWatchdog();
+
     }
 
-    function setupPageChangeListener() {
-        window.addEventListener('hashchange', onPageChange);
-        window.addEventListener('popstate', onPageChange);
-        const observer = new MutationObserver(() => {
-            onPageChange();
-        });
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
+
 
     function setupPreNavigationGuard() {
         try {
@@ -2262,10 +2439,11 @@
         setupFetchAttachmentTap();
         setupPerfObserver();
         setupHlsHook();
+        setupAnnouncementCheck();
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 createControlPanel();
-                setupPageChangeListener();
                 hookHistory();
                 setupPreNavigationGuard();
                 attachStrictHandlers();
@@ -2296,7 +2474,6 @@
             });
         } else {
             createControlPanel();
-            setupPageChangeListener();
             hookHistory();
             setupPreNavigationGuard();
             attachStrictHandlers();
