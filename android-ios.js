@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.13
+// @version      1.1.14
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
-// @author      作者703860120
+// @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://hj*.*/*
 // @match        https://haijiao.com/*
@@ -30,6 +30,43 @@
     }
     const SCRIPT_VERSION = getCurrentVersion();
     const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
+
+    //
+    let hlsLoaded = false;
+    let hlsLoading = false;
+    function loadHls() {
+        return new Promise((resolve, reject) => {
+            if (typeof Hls !== 'undefined') {
+                hlsLoaded = true;
+                resolve();
+                return;
+            }
+            if (hlsLoading) {
+                const check = setInterval(() => {
+                    if (typeof Hls !== 'undefined') {
+                        clearInterval(check);
+                        hlsLoaded = true;
+                        resolve();
+                    }
+                }, 100);
+                return;
+            }
+            hlsLoading = true;
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
+            script.onload = () => {
+                hlsLoaded = true;
+                hlsLoading = false;
+                resolve();
+            };
+            script.onerror = () => {
+                hlsLoading = false;
+                reject(new Error('HLS.js 加载失败'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+    //
 
     async function getLatestVersionFromGitHub() {
         try {
@@ -1585,7 +1622,8 @@
         } catch (_) {}
     }
 
-    function playVideoInPage(m3u8Url) {
+    // ---------- 修复：异步播放函数，动态加载 HLS ----------
+    async function playVideoInPage(m3u8Url) {
         destroyPlayer();
         const overlay = document.createElement('div');
         overlay.id = 'video-player-overlay';
@@ -1672,7 +1710,9 @@
             closeBtn.addEventListener('click', destroyPlayer);
             closeBtn.__hj_bound = true;
         }
+
         const videoElement = document.getElementById('hls-video');
+        // 绑定拖拽、长按等交互（原代码不变）
         let isDraggingVideo = false;
         let dragStartX = 0;
         let dragStartTime = 0;
@@ -1742,7 +1782,24 @@
             clearTimeout(longPressTimer);
             clearInterval(longPressInterval);
         });
-        if (Hls.isSupported()) {
+
+        // ----- 加载 HLS.js 并初始化播放器 -----
+        try {
+            await loadHls();
+        } catch (e) {
+            console.warn('HLS.js 加载失败，尝试直接播放', e);
+            // 降级：直接设置 video.src（仅 Safari 有效）
+            if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                videoElement.src = m3u8Url;
+                videoElement.play().catch(() => {});
+                currentPlayingUrl = m3u8Url;
+            } else {
+                alert('HLS.js 加载失败，您的浏览器不支持直接播放 M3U8，请复制链接使用其他播放器');
+            }
+            return;
+        }
+
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
             const video = document.getElementById('hls-video');
             const hls = new Hls();
             currentHlsInstance = hls;
@@ -1757,13 +1814,15 @@
                     alert('视频加载失败，请尝试复制链接使用其他播放器');
                 }
             });
-        } else if (document.getElementById('hls-video').canPlayType('application/vnd.apple.mpegurl')) {
-            document.getElementById('hls-video').src = m3u8Url;
+        } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+            videoElement.src = m3u8Url;
+            videoElement.play();
             currentPlayingUrl = m3u8Url;
         } else {
             alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
         }
     }
+    // -----------------------------------------
 
     async function downloadVideo() {
         const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
@@ -1891,6 +1950,7 @@
         setPanelModalMode(true);
     }
 
+    // ---------- 修复：playFullVideo 中 await playVideoInPage ----------
     async function playFullVideo(allowPreview = false) {
         if (inFlightPlay) return;
         inFlightPlay = true;
@@ -1935,7 +1995,8 @@
                 inFlightPlay = false;
                 return;
             }
-            playVideoInPage(preferred || capturedM3u8Url);
+            // 异步等待播放器创建完成
+            await playVideoInPage(preferred || capturedM3u8Url);
             try {
                 const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
                 let fullUrl = await Promise.race([
@@ -1965,6 +2026,7 @@
             inFlightPlay = false;
         }
     }
+    // -----------------------------------------
 
     async function localGuessFullM3U8(previewUrl, ts0) {
         try {
