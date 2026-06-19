@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.15
+// @version      1.1.16
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -197,75 +197,61 @@
     }
 
     function showAnnouncementModal() {
-        const content = GM_getValue('announcement_content', '');
-        const time = GM_getValue('announcement_time', '');
+    const content = GM_getValue('announcement_content', '');
+    const time = GM_getValue('announcement_time', '');
 
-        if (!content) {
-            showGlobalToast('暂无公告');
-            return;
-        }
+    if (!content) {
+        showGlobalToast('暂无公告');
+        return;
+    }
 
-        GM_setValue('announcement_read', true);
-        updateAnnouncementBadge();
+    GM_setValue('announcement_read', true);
+    updateAnnouncementBadge();
 
-        const existing = document.querySelector('.hj-modal-overlay[data-type="announcement"]');
-        if (existing) {
-            existing.scrollIntoView?.({
-                behavior: 'smooth',
-                block: 'center'
-            });
-            return;
-        }
+    const existing = document.querySelector('.hj-modal-overlay[data-type="announcement"]');
+    if (existing) {
+        existing.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        return;
+    }
 
-        const modal = document.createElement('div');
-        modal.className = 'hj-modal-overlay';
-        modal.setAttribute('data-type', 'announcement');
-        modal.style.zIndex = '1000006';
+    const modal = document.createElement('div');
+    modal.className = 'hj-modal-overlay';
+    modal.setAttribute('data-type', 'announcement');
+    modal.style.zIndex = '1000006';
 
-        modal.innerHTML = `
-            <div class="hj-modal" style="max-width: 500px;">
-                <div class="hj-modal-title">📢 公告</div>
-                <div class="hj-modal-content" style="text-align: left; max-height: 300px; overflow-y: auto;">
-                    <div style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; font-size: 14px; color: rgba(255,255,255,0.95);">
-                        ${escapeHtml(content)}
-                    </div>
-                    ${time ? `<div style="margin-top: 12px; text-align: right; font-size: 12px; color: rgba(255,255,255,0.6);">📅 ${escapeHtml(time)}</div>` : ''}
+    modal.innerHTML = `
+        <div class="hj-modal" style="max-width: 500px;">
+            <div class="hj-modal-title">📢 公告</div>
+            <div class="hj-modal-content" style="text-align: left; max-height: 300px; overflow-y: auto;">
+                <div style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; font-size: 14px; color: rgba(255,255,255,0.95);">
+                    ${content}
                 </div>
-                <div class="hj-modal-actions">
-                    <button class="hj-modal-btn hj-modal-btn-primary" id="hj-announcement-close" style="width:100%;">知道了</button>
-                </div>
+                ${time ? `<div style="margin-top: 12px; text-align: right; font-size: 12px; color: rgba(255,255,255,0.6);">📅 ${time}</div>` : ''}
             </div>
-        `;
+            <div class="hj-modal-actions">
+                <button class="hj-modal-btn hj-modal-btn-primary" id="hj-announcement-close" style="width:100%;">知道了</button>
+            </div>
+        </div>
+    `;
 
-        document.body.appendChild(modal);
+    document.body.appendChild(modal);
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-                setPanelModalMode(false);
-                ensurePanelVisible();
-            }
-        });
-
-        document.getElementById('hj-announcement-close')?.addEventListener('click', () => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
             modal.remove();
             setPanelModalMode(false);
             ensurePanelVisible();
-        });
+        }
+    });
 
-        setPanelModalMode(true);
-    }
+    document.getElementById('hj-announcement-close')?.addEventListener('click', () => {
+        modal.remove();
+        setPanelModalMode(false);
+        ensurePanelVisible();
+    });
 
-    function setupAnnouncementCheck() {
-        setTimeout(() => {
-            fetchAnnouncement();
-        }, 1500);
-        setInterval(() => {
-            fetchAnnouncement();
-        }, 300000);
-    }
-    // ----- 公告功能结束 -----
-
+    setPanelModalMode(true);
+}
     async function getLatestVersionFromGitHub() {
         try {
             const response = await new Promise((resolve, reject) => {
@@ -2268,54 +2254,52 @@
     }
 
     function onPageChange() {
-        const newUrl = window.location.href;
-        const changed = (newUrl !== currentPageUrl);
-        if (!changed) return;
-        console.log('🔄 页面切换:', newUrl);
+    const newUrl = window.location.href;
+    const changed = (newUrl !== currentPageUrl);
+    if (!changed) return;
+    console.log('🔄 页面切换:', newUrl);
 
-        currentPageUrl = newUrl;
-        try {
-            lastTopicId = getTopicIdFromUrl();
-        } catch (_) {}
-        destroyPlayer();
-        capturedTsUrls = [];
-        capturedM3u8Url = null;
-        sigCaptured = '';
-        sigFull = '';
-        lastResolvedPageUrl = '';
-        lastFullUrl = null;
-        parsingPending = true;
-        resolveEpoch++;
-        stopResolveWatchdog();
-        window.__hj_warmup_stop = false;
-        try {
-            if (resolveCache && resolveCache.clear) resolveCache.clear();
-        } catch (_) {}
-        updatePlayButton();
-        updateStrictUi();
-        setTimeout(() => {
-            autoClickExpandButton();
-            autoTriggerVideoPreview();
-        }, 800);
-        const isTopic = newUrl.includes('/topic/') || newUrl.includes('/post/details') || window.location.hash.includes('/topic/');
-        if (isTopic) {
-            startPreviewWarmup();
-            setTimeout(() => expandPanelOnTopicPage(), 3000);
-            setTimeout(() => forceCheckUpdateForTopic(), 500);
-        }
-        if (isTopic) setTimeout(() => {
-            try {
-                startBackgroundResolve();
-            } catch (_) {}
-        }, 1200);
-        if (isTopic) startResolveWatchdog();
-        if (isTopic) setTimeout(() => lazyViewportWarmup(), 600);
-        setupHlsHook();
-        setupPerfObserver();
-        startPanelWatchdog();
-
+    currentPageUrl = newUrl;
+    try {
+        lastTopicId = getTopicIdFromUrl();
+    } catch (_) {}
+    destroyPlayer();
+    capturedTsUrls = [];
+    capturedM3u8Url = null;
+    sigCaptured = '';
+    sigFull = '';
+    lastResolvedPageUrl = '';
+    lastFullUrl = null;
+    parsingPending = true;
+    resolveEpoch++;
+    stopResolveWatchdog();
+    window.__hj_warmup_stop = false;
+    try {
+        if (resolveCache && resolveCache.clear) resolveCache.clear();
+    } catch (_) {}
+    updatePlayButton();
+    updateStrictUi();
+    setTimeout(() => {
+        autoClickExpandButton();
+        autoTriggerVideoPreview();
+    }, 800);
+    const isTopic = newUrl.includes('/topic/') || newUrl.includes('/post/details') || window.location.hash.includes('/topic/');
+    if (isTopic) {
+        startPreviewWarmup();
+        setTimeout(() => expandPanelOnTopicPage(), 3000);
+        setTimeout(() => forceCheckUpdateForTopic(), 500);
     }
-
+    if (isTopic) setTimeout(() => {
+        try {
+            startBackgroundResolve();
+        } catch (_) {}
+    }, 1200);
+    if (isTopic) startResolveWatchdog();
+    if (isTopic) setTimeout(() => lazyViewportWarmup(), 600);
+    setupHlsHook();
+    setupPerfObserver();
+    startPanelWatchdog();
+}
 
 
     function setupPreNavigationGuard() {
