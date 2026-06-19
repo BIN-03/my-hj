@@ -199,26 +199,26 @@
     function showAnnouncementModal() {
     const content = GM_getValue('announcement_content', '');
     const time = GM_getValue('announcement_time', '');
-
+    
     if (!content) {
         showGlobalToast('暂无公告');
         return;
     }
-
+    
     GM_setValue('announcement_read', true);
     updateAnnouncementBadge();
-
+    
     const existing = document.querySelector('.hj-modal-overlay[data-type="announcement"]');
     if (existing) {
         existing.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
         return;
     }
-
+    
     const modal = document.createElement('div');
     modal.className = 'hj-modal-overlay';
     modal.setAttribute('data-type', 'announcement');
     modal.style.zIndex = '1000006';
-
+    
     modal.innerHTML = `
         <div class="hj-modal" style="max-width: 500px;">
             <div class="hj-modal-title">📢 公告</div>
@@ -233,9 +233,9 @@
             </div>
         </div>
     `;
-
+    
     document.body.appendChild(modal);
-
+    
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
@@ -243,13 +243,13 @@
             ensurePanelVisible();
         }
     });
-
+    
     document.getElementById('hj-announcement-close')?.addEventListener('click', () => {
         modal.remove();
         setPanelModalMode(false);
         ensurePanelVisible();
     });
-
+    
     setPanelModalMode(true);
 }
     async function getLatestVersionFromGitHub() {
