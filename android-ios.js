@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.1.20
+// @version      1.2.2
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -21,7 +21,7 @@
 (function() {
 	'use strict';
 	let currentPlayingUrl = null;
-	// 版本更新检测
+
 	function getCurrentVersion() {
 		if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
 			return GM_info.script.version.trim();
@@ -31,7 +31,6 @@
 	const SCRIPT_VERSION = getCurrentVersion();
 	const GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
 
-	// 公告
 	const ANNOUNCEMENT_URL = 'https://gist.githubusercontent.com/BIN-03/ff5cd09874cba6c1a8a352bf27b6067f/raw/Official_announcement.json';
 
 	let hlsLoaded = false;
@@ -70,7 +69,6 @@
 		});
 	}
 
-	// 公告功能
 	function showAnnouncementToast(text) {
 		const existing = document.getElementById('hj-announcement-toast');
 		if (existing) existing.remove();
@@ -148,7 +146,6 @@
 			fetchAnnouncement();
 		}, 1500);
 
-		// 每5秒检查一次
 		setInterval(() => {
 			fetchAnnouncement();
 		}, 5000);
@@ -283,7 +280,6 @@
 		}
 	}
 
-	// 显示更新弹窗
 	function showUpdateNotification(newVersion) {
 		const existing = document.getElementById('hj-update-notification');
 		if (existing) existing.remove();
@@ -370,19 +366,15 @@
 		}, 15000);
 	}
 
-	// 首次进入网站时检查更新
 	async function checkForUpdateOnFirstVisit() {
 		try {
 			const latestVersion = await getLatestVersionFromGitHub();
 			if (latestVersion && latestVersion !== SCRIPT_VERSION) {
 				showUpdateNotification(latestVersion);
 			}
-		} catch (e) {
-			// 静默失败
-		}
+		} catch (e) {}
 	}
 
-	// 每次进入帖子时强制检查更新
 	let pendingForceCheck = false;
 	async function forceCheckUpdateForTopic() {
 		if (pendingForceCheck) return;
@@ -392,14 +384,11 @@
 			if (latestVersion && latestVersion !== SCRIPT_VERSION) {
 				showUpdateNotification(latestVersion);
 			}
-		} catch (e) {
-			// 静默失败
-		} finally {
+		} catch (e) {} finally {
 			pendingForceCheck = false;
 		}
 	}
 
-	// 全局Toast - 显示在最外层，不会被弹窗遮挡
 	function showGlobalToast(text, isError = false) {
 		try {
 			const existing = document.getElementById('hj-global-toast');
@@ -454,7 +443,6 @@
 		} catch (e) {}
 	}
 
-	// 检查本地版本变化
 	function checkLocalVersionUpdate() {
 		try {
 			GM_deleteValue('last_run_version');
@@ -466,7 +454,6 @@
 		GM_setValue('last_run_version', SCRIPT_VERSION);
 	}
 	checkLocalVersionUpdate();
-	// 首次进入网站时检查更新
 	checkForUpdateOnFirstVisit();
 
 	function escapeHtml(str) {
@@ -1579,44 +1566,143 @@
 	}
 
 	function markPostTypes() {
-		const titleLinks = document.querySelectorAll('a.td-title');
-		titleLinks.forEach(a => {
-			if (a.dataset.hjTypeMarked) return;
-			a.dataset.hjTypeMarked = '1';
+		const allBoxes = document.querySelectorAll('.content-box');
+		const boxes = [];
+		allBoxes.forEach(box => {
+			let parent = box.parentElement;
+			let isNested = false;
+			while (parent) {
+				if (parent.classList && parent.classList.contains('content-box')) {
+					isNested = true;
+					break;
+				}
+				parent = parent.parentElement;
+			}
+			if (!isNested) boxes.push(box);
+		});
 
-			const iconDiv = a.querySelector('.title-icon');
-			if (!iconDiv) return;
-			const hasVideoIcon = iconDiv.querySelector('img[src*="video.png"]') !== null;
-			const hasPlayIcon = iconDiv.querySelector('img[src*="play"], .play-icon, [class*="play"]') !== null;
-			const hasVideoClass = iconDiv.querySelector('.video-label, [class*="video"]') !== null;
-			const videoImg = iconDiv.querySelector('img[src*="video.png"]');
-			const isVideoVisible = videoImg && window.getComputedStyle(videoImg).display !== 'none';
-			const isVideo = hasVideoIcon && (hasPlayIcon || hasVideoClass || isVideoVisible);
+		boxes.forEach(box => {
+			if (box.dataset.hjTypeMarked) return;
+			box.dataset.hjTypeMarked = '1';
 
-			const typeLabel = isVideo ? '🎬 视频' : '🖼 图片';
-			const badge = document.createElement('span');
-			badge.textContent = typeLabel;
-			badge.style.cssText = `
-            display: inline-block;
-            background: ${isVideo ? '#ff4757' : '#2ed573'};
-            color: #fff;
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 12px;
-            margin-right: 8px;
-            font-weight: bold;
-            vertical-align: middle;
-            flex-shrink: 0;
-        `;
-			a.parentNode.insertBefore(badge, a);
+			const titleEl = box.querySelector('.content-title');
+			if (!titleEl) return;
+
+			titleEl.style.overflow = 'visible';
+
+			const title = titleEl.textContent.trim();
+			if (!title) return;
+
+			let hasVideo = false;
+			let hasImage = false;
+			const lowerTitle = title.toLowerCase();
+
+			const videoKeywords = ['视频', '播放', '原创', '影视', '动画', '录播', '直播', 'vod', 'movie', 'film', '自制', '分享'];
+			const imageKeywords = ['照片', '图片', '图集', '摄影', '写真'];
+
+			for (const kw of videoKeywords) {
+				if (lowerTitle.includes(kw)) {
+					hasVideo = true;
+					break;
+				}
+			}
+			for (const kw of imageKeywords) {
+				if (lowerTitle.includes(kw)) {
+					hasImage = true;
+					break;
+				}
+			}
+
+			if (!hasVideo) {
+				const videoIcon = box.querySelector(
+					'.play-icon, .video-icon, [class*="play"]:not(.hj-badge), [class*="video"]:not(.hj-badge), ' +
+					'img[src*="play"], img[src*="video"]'
+				);
+				if (videoIcon) hasVideo = true;
+			}
+			if (!hasImage) {
+				const imageIcon = box.querySelector(
+					'img[src*="photo"], img[src*="image"], [class*="photo"], [class*="image"]'
+				);
+				if (imageIcon) hasImage = true;
+			}
+
+			if (!hasVideo && !hasImage) {
+				hasImage = true;
+			}
+
+			const oldBadges = titleEl.querySelectorAll('.hj-badge');
+			oldBadges.forEach(b => b.remove());
+
+			const labelMap = [{
+					key: '视频',
+					condition: hasVideo,
+					bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+				},
+				{
+					key: '图片',
+					condition: hasImage,
+					bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+				}
+			];
+
+			labelMap.forEach(item => {
+				if (!item.condition) return;
+				const badge = document.createElement('span');
+				badge.className = 'hj-badge';
+				badge.textContent = item.key === '视频' ? '🎬 视频' : ' 图片';
+				badge.style.cssText = `
+                display: inline-block;
+                background: ${item.bg};
+                color: #fff;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 2px 10px;
+                border-radius: 20px;
+                margin-right: 6px;
+                letter-spacing: 0.5px;
+                vertical-align: middle;
+                flex-shrink: 0;
+                line-height: 1.6;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                backdrop-filter: blur(2px);
+                border: 1px solid rgba(255,255,255,0.2);
+            `;
+				titleEl.prepend(badge);
+			});
 		});
 	}
+
+	function showPreviewBlocked() {
+		const old = document.querySelector('.hj-preview-overlay');
+		if (old) return;
+
+		const overlay = document.createElement('div');
+		overlay.className = 'hj-preview-overlay';
+		overlay.style.cssText = 'position:fixed;inset:0;z-index:10000000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+
+		const box = document.createElement('div');
+		box.id = 'wt-resources-box';
+		overlay.appendChild(box);
+
+		overlay.onclick = () => overlay.remove();
+		document.body.appendChild(overlay);
+		setTimeout(() => overlay.remove(), 1000);
+	}
+	document.addEventListener('click', (e) => {
+		const btn = e.target.closest('.preview-btn, span.preview-btn, [class*="preview"]');
+		if (btn) {
+			e.preventDefault();
+			e.stopPropagation();
+			showPreviewBlocked();
+		}
+	}, true);
 
 	function createControlPanel() {
 		if (uiCreated || document.querySelector('.hj-floating-panel')) return;
 		GM_addStyle(`
             #wt-resources-box { position: relative; border: 1px dashed #ec8181; background: #fff4f4; }
-            #wt-resources-box::after { content: '请使用屏幕右边插件悬浮播放按钮播放'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: red; font-size: 18px; text-shadow: 1px 1px 0px; text-align: center; width: 80%; }
+            #wt-resources-box::after { content: '请使用屏幕右边悬浮播放按钮播放'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: red; font-size: 18px; text-shadow: 1px 1px 0px; text-align: center; width: 80%; }
             .sell-btn { border: none !important; margin-top: 20px; }
             .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.75); transform-origin: right center; }
             .hj-floating-panel.dragging { transition: none; }
@@ -1701,8 +1787,6 @@
 		setupPanelEvents(panel);
 		attachPlayHandler();
 		attachDownloadHandler();
-
-		// 绑定公告按钮事件
 		const announceBtn = document.getElementById('hj-btn-announcement');
 		if (announceBtn) {
 			announceBtn.addEventListener('click', (e) => {
@@ -2517,15 +2601,17 @@
 				setTimeout(() => forceCheckUpdateForTopic(), 500);
 			}
 		}
-		// 首次执行（延迟等待列表加载）
-		setTimeout(markPostTypes, 1500);
-		const typeObserver = new MutationObserver(() => {
-			markPostTypes();
+		const observer = new MutationObserver(() => {
+			clearTimeout(window._hj_markTimer);
+			window._hj_markTimer = setTimeout(() => {
+				markPostTypes();
+			}, 300);
 		});
-		typeObserver.observe(document.body, {
+		observer.observe(document.body, {
 			childList: true,
 			subtree: true
 		});
+		window._hj_typeObserver = observer;
 	}
 
 	init();
