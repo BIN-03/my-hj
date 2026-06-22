@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.2.2
+// @version      1.2.12
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -1448,7 +1448,7 @@
 		);
 		const expandClassIds = [
 			'expand', 'more', 'show-more', 'read-more', 'unfold',
-			'sell-btn', '展开', 'btn-more', 'btn-expand'
+			'展开', 'btn-more', 'btn-expand'
 		];
 		const hasExpandClass = expandClassIds.some(expandClass =>
 			className.toLowerCase().includes(expandClass.toLowerCase()) ||
@@ -1478,6 +1478,9 @@
 	function autoClickExpandButton() {
 		const allElements = document.querySelectorAll('button, a, span, div');
 		allElements.forEach(element => {
+			if (element.classList && element.classList.contains('sell-btn')) {
+				return;
+			}
 			if (isExpandButton(element) && isElementVisible(element)) {
 				try {
 					element.click();
@@ -1690,7 +1693,7 @@
 		setTimeout(() => overlay.remove(), 1000);
 	}
 	document.addEventListener('click', (e) => {
-		const btn = e.target.closest('.preview-btn, span.preview-btn, [class*="preview"]');
+		const btn = e.target.closest('.preview-btn, span.preview-btn, [class*="preview"], .sell-btn');
 		if (btn) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -1702,7 +1705,7 @@
 		if (uiCreated || document.querySelector('.hj-floating-panel')) return;
 		GM_addStyle(`
             #wt-resources-box { position: relative; border: 1px dashed #ec8181; background: #fff4f4; }
-            #wt-resources-box::after { content: '请使用屏幕右边悬浮播放按钮播放'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: red; font-size: 18px; text-shadow: 1px 1px 0px; text-align: center; width: 80%; }
+            #wt-resources-box::after {content: '⚠️ 请使用屏幕右边播放按钮播放'; position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%) translateZ(0);color: #ff0000;font-size: 18px;font-weight: 700;text-shadow: 0 0 10px rgba(255, 0, 0, 0.2);text-align: center;width: 80%;line-height: 1.6;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;will-change: transform;}
             .sell-btn { border: none !important; margin-top: 20px; }
             .hj-floating-panel { position: fixed; right: 20px; top: 50%; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: none; user-select: none; transform: translateY(-50%) scale(0.75); transform-origin: right center; }
             .hj-floating-panel.dragging { transition: none; }
