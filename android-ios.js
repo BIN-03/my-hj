@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.2.12
+// @version      1.2.123
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -38,20 +38,9 @@
 
 	function loadHls() {
 		return new Promise((resolve, reject) => {
-			if (typeof Hls !== 'undefined') {
-				hlsLoaded = true;
-				resolve();
-				return;
-			}
+			
 			if (hlsLoading) {
-				const check = setInterval(() => {
-					if (typeof Hls !== 'undefined') {
-						clearInterval(check);
-						hlsLoaded = true;
-						resolve();
-					}
-				}, 100);
-				return;
+				
 			}
 			hlsLoading = true;
 			const script = document.createElement('script');
@@ -151,14 +140,7 @@
 		}, 5000);
 	}
 
-	function updateAnnouncementBadge() {
-		const btn = document.getElementById('hj-btn-announcement');
-		if (!btn) {
-			setTimeout(() => {
-				updateAnnouncementBadge();
-			}, 500);
-			return;
-		}
+	
 
 		const read = GM_getValue('announcement_read', false);
 		const hasContent = GM_getValue('announcement_content', '');
@@ -582,14 +564,7 @@
 
 	let resolveWatchdogId = 0;
 
-	function stopResolveWatchdog() {
-		try {
-			if (resolveWatchdogId) {
-				clearInterval(resolveWatchdogId);
-				resolveWatchdogId = 0;
-			}
-		} catch (_) {}
-	}
+	
 
 	function startResolveWatchdog() {
 		try {
@@ -649,17 +624,7 @@
 		return;
 	}
 
-	function setupXHROpenHook() {
-		if (XMLHttpRequest.__hj_open_hooked) return;
-		const origOpen = XMLHttpRequest.prototype.open;
-		XMLHttpRequest.prototype.open = function(method, url) {
-			try {
-				this._hj_open_url = url;
-			} catch (_) {}
-			return origOpen.apply(this, arguments);
-		};
-		XMLHttpRequest.__hj_open_hooked = true;
-	}
+	
 
 	function setupTsCapture() {
 		const originalXhrSend = XMLHttpRequest.prototype.send;
@@ -739,30 +704,7 @@
 		return null;
 	}
 
-	function setupPerfObserver() {
-		try {
-			if (window.__hj_perf_obs) return;
-			if (typeof PerformanceObserver !== 'function') return;
-			const obs = new PerformanceObserver((list) => {
-				try {
-					const entries = list.getEntries() || [];
-					const callEpoch = resolveEpoch;
-					const callPage = currentPageUrl || window.location.href;
-					for (const e of entries) {
-						const u = e && (e.name || '');
-						if (u && /\.m3u8(\?|$)/i.test(u)) {
-							if (callEpoch === resolveEpoch && callPage === (currentPageUrl || window.location.href)) {
-								capturedM3u8Url = u;
-								sigCaptured = currentSig();
-								setTimeout(() => analyzeFullVideoUrl(null), 100);
-							}
-						} else if (u && /\.ts(\?|$)/i.test(u) && !/\.ts\./i.test(u)) {
-							if (!capturedTsUrls.includes(u)) capturedTsUrls.push(u);
-							if (capturedTsUrls.length === 1) analyzeFullVideoUrl(u);
-						}
-					}
-				} catch (_) {}
-			});
+	
 			obs.observe({
 				type: 'resource',
 				buffered: true
@@ -771,102 +713,7 @@
 		} catch (_) {}
 	}
 
-	function setupFetchAttachmentTap() {
-		try {
-			if (window.__hj_fetch_attach_tapped) return;
-			const ofetch = window.fetch.bind(window);
-			window.fetch = async function(input, init) {
-				try {
-					const p = (typeof input === 'string') ? input : (input && input.url) || '';
-					const callEpoch = resolveEpoch;
-					const callPage = currentPageUrl || window.location.href;
-					const resp = await ofetch.apply(this, arguments);
-					if (/\/api\/attachment(\?|$)/.test(p)) {
-						try {
-							const clone = resp.clone();
-							const txt = await clone.text();
-							let obj = null;
-							try {
-								obj = JSON.parse(txt);
-							} catch (_) {}
-							const remote = obj && (obj.remoteUrl || (obj.data && obj.data.remoteUrl));
-							if (typeof remote === 'string' && /\.m3u8(\?|$)/i.test(remote)) {
-								if (!capturedM3u8Url && callEpoch === resolveEpoch && callPage === currentPageUrl && isTopicPageNow()) {
-									capturedM3u8Url = remote;
-									sigCaptured = currentSig();
-									setTimeout(() => analyzeFullVideoUrl(null), 0);
-									setTimeout(() => startBackgroundResolve(), 0);
-								}
-							}
-						} catch (_) {}
-					}
-					return resp;
-				} catch (e) {
-					return ofetch.apply(this, arguments);
-				}
-			};
-			window.__hj_fetch_attach_tapped = true;
-		} catch (_) {}
-	}
-
-	function getTopicIdFromUrl() {
-		try {
-			const u = new URL(window.location.href);
-			const qp = u.searchParams;
-			const cand = [qp.get('id'), qp.get('pid'), qp.get('tid')].filter(Boolean);
-			for (const v of cand) {
-				if (/^\d+$/.test(v)) return v;
-			}
-			const m = u.pathname.match(/\b(\d{4,})\b(?!.*\d)/);
-			if (m) return m[1];
-		} catch (_) {}
-		return null;
-	}
-
-	function probePreviewFromPreviewBtn() {
-		try {
-			if (capturedM3u8Url) return true;
-			const btn = document.querySelector('span.preview-btn, .preview-btn');
-			if (!btn) return false;
-			const url = btn.getAttribute('data-url') || '';
-			if (url && /\.m3u8(\?|$)/i.test(url)) {
-				capturedM3u8Url = new URL(url, location.href).href;
-				setTimeout(() => analyzeFullVideoUrl(null), 0);
-				setTimeout(() => startBackgroundResolve(), 0);
-				setTimeout(() => ensureTsSampleFromPreview(capturedM3u8Url), 0);
-				return true;
-			}
-		} catch (_) {}
-		return false;
-	}
-
-	function triggerPreviewButtonClick() {
-		try {
-			const btn = document.querySelector('span.preview-btn, .preview-btn');
-			if (!btn) return false;
-			const rect = btn.getBoundingClientRect();
-			try {
-				btn.scrollIntoView({
-					block: 'center',
-					inline: 'center'
-				});
-			} catch (_) {}
-			const opts = {
-				bubbles: true,
-				cancelable: true,
-				clientX: Math.floor(rect.left + 5),
-				clientY: Math.floor(rect.top + 5)
-			};
-			btn.dispatchEvent(new MouseEvent('pointerdown', opts));
-			btn.dispatchEvent(new MouseEvent('mousedown', opts));
-			btn.dispatchEvent(new MouseEvent('mouseup', opts));
-			btn.dispatchEvent(new MouseEvent('pointerup', opts));
-			btn.dispatchEvent(new MouseEvent('click', opts));
-			return true;
-		} catch (_) {
-			return false;
-		}
-	}
+	
 
 	async function probePreviewViaApi() {
 		if (capturedM3u8Url) return true;
