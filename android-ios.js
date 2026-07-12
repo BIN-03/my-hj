@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.2.123
+// @version      1.3.14
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -38,9 +38,20 @@
 
 	function loadHls() {
 		return new Promise((resolve, reject) => {
-			
+			if (typeof Hls !== 'undefined') {
+				hlsLoaded = true;
+				resolve();
+				return;
+			}
 			if (hlsLoading) {
-				
+				const check = setInterval(() => {
+					if (typeof Hls !== 'undefined') {
+						clearInterval(check);
+						hlsLoaded = true;
+						resolve();
+					}
+				}, 100);
+				return;
 			}
 			hlsLoading = true;
 			const script = document.createElement('script');
@@ -140,7 +151,14 @@
 		}, 5000);
 	}
 
-	
+	function updateAnnouncementBadge() {
+		const btn = document.getElementById('hj-btn-announcement');
+		if (!btn) {
+			setTimeout(() => {
+				updateAnnouncementBadge();
+			}, 500);
+			return;
+		}
 
 		const read = GM_getValue('announcement_read', false);
 		const hasContent = GM_getValue('announcement_content', '');
@@ -564,7 +582,14 @@
 
 	let resolveWatchdogId = 0;
 
-	
+	function stopResolveWatchdog() {
+		try {
+			if (resolveWatchdogId) {
+				clearInterval(resolveWatchdogId);
+				resolveWatchdogId = 0;
+			}
+		} catch (_) {}
+	}
 
 	function startResolveWatchdog() {
 		try {
@@ -624,7 +649,17 @@
 		return;
 	}
 
-	
+	function setupXHROpenHook() {
+		if (XMLHttpRequest.__hj_open_hooked) return;
+		const origOpen = XMLHttpRequest.prototype.open;
+		XMLHttpRequest.prototype.open = function(method, url) {
+			try {
+				this._hj_open_url = url;
+			} catch (_) {}
+			return origOpen.apply(this, arguments);
+		};
+		XMLHttpRequest.__hj_open_hooked = true;
+	}
 
 	function setupTsCapture() {
 		const originalXhrSend = XMLHttpRequest.prototype.send;
@@ -704,7 +739,30 @@
 		return null;
 	}
 
-	
+	function setupPerfObserver() {
+		try {
+			if (window.__hj_perf_obs) return;
+			if (typeof PerformanceObserver !== 'function') return;
+			const obs = new PerformanceObserver((list) => {
+				try {
+					const entries = list.getEntries() || [];
+					const callEpoch = resolveEpoch;
+					const callPage = currentPageUrl || window.location.href;
+					for (const e of entries) {
+						const u = e && (e.name || '');
+						if (u && /\.m3u8(\?|$)/i.test(u)) {
+							if (callEpoch === resolveEpoch && callPage === (currentPageUrl || window.location.href)) {
+								capturedM3u8Url = u;
+								sigCaptured = currentSig();
+								setTimeout(() => analyzeFullVideoUrl(null), 100);
+							}
+						} else if (u && /\.ts(\?|$)/i.test(u) && !/\.ts\./i.test(u)) {
+							if (!capturedTsUrls.includes(u)) capturedTsUrls.push(u);
+							if (capturedTsUrls.length === 1) analyzeFullVideoUrl(u);
+						}
+					}
+				} catch (_) {}
+			});
 			obs.observe({
 				type: 'resource',
 				buffered: true
@@ -713,7 +771,102 @@
 		} catch (_) {}
 	}
 
-	
+	function setupFetchAttachmentTap() {
+		try {
+			if (window.__hj_fetch_attach_tapped) return;
+			const ofetch = window.fetch.bind(window);
+			window.fetch = async function(input, init) {
+				try {
+					const p = (typeof input === 'string') ? input : (input && input.url) || '';
+					const callEpoch = resolveEpoch;
+					const callPage = currentPageUrl || window.location.href;
+					const resp = await ofetch.apply(this, arguments);
+					if (/\/api\/attachment(\?|$)/.test(p)) {
+						try {
+							const clone = resp.clone();
+							const txt = await clone.text();
+							let obj = null;
+							try {
+								obj = JSON.parse(txt);
+							} catch (_) {}
+							const remote = obj && (obj.remoteUrl || (obj.data && obj.data.remoteUrl));
+							if (typeof remote === 'string' && /\.m3u8(\?|$)/i.test(remote)) {
+								if (!capturedM3u8Url && callEpoch === resolveEpoch && callPage === currentPageUrl && isTopicPageNow()) {
+									capturedM3u8Url = remote;
+									sigCaptured = currentSig();
+									setTimeout(() => analyzeFullVideoUrl(null), 0);
+									setTimeout(() => startBackgroundResolve(), 0);
+								}
+							}
+						} catch (_) {}
+					}
+					return resp;
+				} catch (e) {
+					return ofetch.apply(this, arguments);
+				}
+			};
+			window.__hj_fetch_attach_tapped = true;
+		} catch (_) {}
+	}
+
+	function getTopicIdFromUrl() {
+		try {
+			const u = new URL(window.location.href);
+			const qp = u.searchParams;
+			const cand = [qp.get('id'), qp.get('pid'), qp.get('tid')].filter(Boolean);
+			for (const v of cand) {
+				if (/^\d+$/.test(v)) return v;
+			}
+			const m = u.pathname.match(/\b(\d{4,})\b(?!.*\d)/);
+			if (m) return m[1];
+		} catch (_) {}
+		return null;
+	}
+
+	function probePreviewFromPreviewBtn() {
+		try {
+			if (capturedM3u8Url) return true;
+			const btn = document.querySelector('span.preview-btn, .preview-btn');
+			if (!btn) return false;
+			const url = btn.getAttribute('data-url') || '';
+			if (url && /\.m3u8(\?|$)/i.test(url)) {
+				capturedM3u8Url = new URL(url, location.href).href;
+				setTimeout(() => analyzeFullVideoUrl(null), 0);
+				setTimeout(() => startBackgroundResolve(), 0);
+				setTimeout(() => ensureTsSampleFromPreview(capturedM3u8Url), 0);
+				return true;
+			}
+		} catch (_) {}
+		return false;
+	}
+
+	function triggerPreviewButtonClick() {
+		try {
+			const btn = document.querySelector('span.preview-btn, .preview-btn');
+			if (!btn) return false;
+			const rect = btn.getBoundingClientRect();
+			try {
+				btn.scrollIntoView({
+					block: 'center',
+					inline: 'center'
+				});
+			} catch (_) {}
+			const opts = {
+				bubbles: true,
+				cancelable: true,
+				clientX: Math.floor(rect.left + 5),
+				clientY: Math.floor(rect.top + 5)
+			};
+			btn.dispatchEvent(new MouseEvent('pointerdown', opts));
+			btn.dispatchEvent(new MouseEvent('mousedown', opts));
+			btn.dispatchEvent(new MouseEvent('mouseup', opts));
+			btn.dispatchEvent(new MouseEvent('pointerup', opts));
+			btn.dispatchEvent(new MouseEvent('click', opts));
+			return true;
+		} catch (_) {
+			return false;
+		}
+	}
 
 	async function probePreviewViaApi() {
 		if (capturedM3u8Url) return true;
@@ -1776,246 +1929,9 @@
 		} catch (_) {}
 	}
 
-	async function playVideoInPage(m3u8Url) {
-		destroyPlayer();
-		const overlay = document.createElement('div');
-		overlay.id = 'video-player-overlay';
-		overlay.innerHTML = `
-        <div class="video-player-container">
-            <div class="video-header">
-                <h3>🎬 完整视频播放</h3>
-                <button class="close-btn" id="close-player-btn">✕</button>
-            </div>
-            <div class="video-tips">💡 如果视频不能正常播放请检查您的网络环境，支持拖动，倍速播放哦~</div>
-            <video id="hls-video" controls autoplay style="width:100%;max-height:70vh;background:#000;">
-                您的浏览器不支持视频播放
-            </video>
-        </div>
-    `;
-		GM_addStyle(`
-        #video-player-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 99999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .video-player-container {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            max-width: 90%;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
-        }
-        .video-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .video-header h3 {
-            margin: 0;
-            color: #333;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .video-tips {
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-            margin-bottom: 12px;
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            line-height: 1.5;
-        }
-        .close-btn {
-            background: #ff4757;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .close-btn:hover {
-            background: #ff3838;
-            transform: scale(1.1);
-        }
-        #hls-video {
-            cursor: pointer;
-            user-select: none;
-        }
-    `);
-		try {
-			overlay.setAttribute('data-page', currentPageUrl);
-		} catch (_) {}
-		document.body.appendChild(overlay);
-		const closeBtn = document.getElementById('close-player-btn');
-		if (closeBtn && !closeBtn.__hj_bound) {
-			closeBtn.addEventListener('click', destroyPlayer);
-			closeBtn.__hj_bound = true;
-		}
+	
 
-		const videoElement = document.getElementById('hls-video');
-		let isDraggingVideo = false;
-		let dragStartX = 0;
-		let dragStartTime = 0;
-		videoElement.addEventListener('mousedown', (e) => {
-			isDraggingVideo = true;
-			dragStartX = e.clientX;
-			dragStartTime = videoElement.currentTime;
-			e.preventDefault();
-		});
-		document.addEventListener('mousemove', (e) => {
-			if (!isDraggingVideo) return;
-			const deltaX = e.clientX - dragStartX;
-			const seekAmount = deltaX / 5;
-			const newTime = Math.max(0, Math.min(videoElement.duration, dragStartTime + seekAmount));
-			videoElement.currentTime = newTime;
-		});
-		document.addEventListener('mouseup', () => {
-			isDraggingVideo = false;
-		});
-		let longPressTimer = null;
-		let longPressInterval = null;
-		const speedUpRate = 0.5;
-		videoElement.addEventListener('mousedown', (e) => {
-			if (e.button !== 0) return;
-			longPressTimer = setTimeout(() => {
-				longPressInterval = setInterval(() => {
-					if (videoElement.currentTime < videoElement.duration) {
-						videoElement.currentTime += speedUpRate;
-					} else {
-						clearInterval(longPressInterval);
-					}
-				}, 100);
-			}, 500);
-		});
-		videoElement.addEventListener('mouseup', () => {
-			clearTimeout(longPressTimer);
-			clearInterval(longPressInterval);
-		});
-		videoElement.addEventListener('mouseleave', () => {
-			clearTimeout(longPressTimer);
-			clearInterval(longPressInterval);
-		});
-		let touchStartX = 0;
-		let touchStartTime = 0;
-		videoElement.addEventListener('touchstart', (e) => {
-			touchStartX = e.touches[0].clientX;
-			touchStartTime = videoElement.currentTime;
-			longPressTimer = setTimeout(() => {
-				longPressInterval = setInterval(() => {
-					if (videoElement.currentTime < videoElement.duration) {
-						videoElement.currentTime += speedUpRate;
-					} else {
-						clearInterval(longPressInterval);
-					}
-				}, 100);
-			}, 500);
-		});
-		videoElement.addEventListener('touchmove', (e) => {
-			const deltaX = e.touches[0].clientX - touchStartX;
-			const seekAmount = deltaX / 5;
-			const newTime = Math.max(0, Math.min(videoElement.duration, touchStartTime + seekAmount));
-			videoElement.currentTime = newTime;
-			clearTimeout(longPressTimer);
-			clearInterval(longPressInterval);
-		});
-		videoElement.addEventListener('touchend', () => {
-			clearTimeout(longPressTimer);
-			clearInterval(longPressInterval);
-		});
-
-		try {
-			await loadHls();
-		} catch (e) {
-			console.warn('HLS.js 加载失败，尝试直接播放', e);
-			if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-				videoElement.src = m3u8Url;
-				videoElement.play().catch(() => {});
-				currentPlayingUrl = m3u8Url;
-			} else {
-				alert('HLS.js 加载失败，您的浏览器不支持直接播放 M3U8，请复制链接使用其他播放器');
-			}
-			return;
-		}
-
-		if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-			const video = document.getElementById('hls-video');
-			const hls = new Hls();
-			currentHlsInstance = hls;
-			hls.loadSource(m3u8Url);
-			hls.attachMedia(video);
-			currentPlayingUrl = m3u8Url;
-			hls.on(Hls.Events.MANIFEST_PARSED, () => {
-				video.play();
-			});
-			hls.on(Hls.Events.ERROR, (event, data) => {
-				if (data.fatal) {
-					alert('视频加载失败，请尝试复制链接使用其他播放器');
-				}
-			});
-		} else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-			videoElement.src = m3u8Url;
-			videoElement.play();
-			currentPlayingUrl = m3u8Url;
-		} else {
-			alert('您的浏览器不支持HLS播放，请复制链接使用其他播放器');
-		}
-	}
-
-	async function downloadVideo() {
-		const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
-		if (existingModal) {
-			existingModal.scrollIntoView?.({
-				behavior: 'smooth',
-				block: 'center'
-			});
-			showGlobalToast('📥 下载窗口已打开');
-			return;
-		}
-		downloadOpen = true;
-		let initialUrl = lastFullUrl || capturedM3u8Url || null;
-		if (!initialUrl) {
-			showGlobalToast('❌ 未捕获到视频URL，请稍后重试');
-			downloadOpen = false;
-			return;
-		}
-		showDownloadModal(initialUrl, true);
-		if (initialUrl && !isFullReady()) {
-			try {
-				const tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
-				const fullUrl = await resolveFullFromServer({
-					pageUrl: location.href,
-					previewM3u8Url: capturedM3u8Url,
-					tsSamples: tsSample
-				});
-				if (fullUrl && fullUrl !== initialUrl) {
-					const urlTextarea = document.getElementById('hj-download-url');
-					if (urlTextarea) {
-						urlTextarea.value = fullUrl;
-						urlTextarea.classList.add('hj-url-updated');
-						showGlobalToast('✨ 已更新为完整版视频链接');
-					}
-					lastFullUrl = fullUrl;
-					capturedM3u8Url = fullUrl;
-					sigFull = currentSig();
-					sigCaptured = currentSig();
-					updateStrictUi();
-				}
-			} catch (_) {}
-		}
-	}
-
+	
 	function showDownloadModal(displayUrl, isLoading = false) {
 		const existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
 		if (existingModal) return;
