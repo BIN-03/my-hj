@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.20
+// @version      1.3.21
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -123,7 +123,6 @@ if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime |
                 var data = await response.json();
                 remoteConfig = data;
                 configLoaded = true;
-                console.log('✅ 远程配置加载成功', data);
 
                 if (data.content) {
                     var currentContent = GM_getValue('announcement_content', '');
@@ -1697,11 +1696,9 @@ if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime |
                 e.preventDefault();
                 showAnnouncementModal();
             });
-            console.log('✅ 公告按钮已绑定');
         }
 
         setTimeout(function() {
-            console.log('🔄 尝试更新公告标记...');
             updateAnnouncementBadge();
         }, 500);
 
@@ -2244,7 +2241,6 @@ if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime |
         var newUrl = window.location.href;
         var changed = (newUrl !== currentPageUrl);
         if (!changed) return;
-        console.log('🔄 页面切换:', newUrl);
 
         currentPageUrl = newUrl;
         try { lastTopicId = getTopicIdFromUrl(); } catch (_) {}
@@ -2411,11 +2407,6 @@ if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime |
                     activationBtn.style.display = 'none';
                 }
             }, 1000);
-        }
-
-        var expOk = initExperienceCheck();
-        if (!expOk) {
-            console.log('⏰ 体验时间已到期，请打开🔒按钮激活');
         }
 
         checkLocalVersionUpdate();
