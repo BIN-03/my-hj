@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.17
+// @version      1.3.19
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://h6*.*/*
 // @match        https://haijiao.com/*
 // @match        https://*.haijiao.com/*
+// @match        https://hj251101e0b.top/*
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_addStyle
@@ -18,8 +19,10 @@
 // @license      MIT
 // ==/UserScript==
 (function() {
-    'use strict';const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/2d29551cb121311ef8e8e4eabdde62c081dee58d/config.json';const EXPERIENCE_DURATION = 0x124F80;const STORAGE_KEY = 'hj_experience_data';let remoteConfig = null;let configLoaded = false;function getExperienceData() {
-try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime || 0,locked: parsed.locked || false,firstUse: parsed.firstUse !== undefined ? parsed.firstUse : true};}} catch (e) {console.warn('读取体验数据失败:', e);}return { startTime: 0, locked: false, firstUse: true };}function saveExperienceData(startTime, locked, firstUse) {
+    'use strict';const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/2d29551cb121311ef8e8e4eabdde62c081dee58d/config.json';const EXPERIENCE_DURATION = 0x124F80;const STORAGE_KEY = 'hj_experience_data';let remoteConfig = null;let configLoaded = false;function getExperienceData() {try {const data = localStorage.getItem(STORAGE_KEY);
+if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime || 0,locked: parsed.locked || false,firstUse: parsed.firstUse !== undefined ? parsed.firstUse : true};}} catch (e) {console.warn('读取体验数据失败:', e);}return { startTime: 0, locked: false, firstUse: true };}
+
+    function saveExperienceData(startTime, locked, firstUse) {
         try {
             const data = {
                 startTime: startTime || 0,
@@ -61,7 +64,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
 
         const toast = document.createElement('div');
         toast.id = 'hj-expired-toast';
-        toast.textContent = '⏰ 体验时间已到，请打开🔒输入激活码';
+        toast.textContent = '⏰ 体验时间已到';
         toast.style.cssText = 'position:fixed;top:20px;right:20px;background:rgba(220,53,69,0.95);color:white;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;z-index:10000000;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 4px 15px rgba(220,53,69,0.4);backdrop-filter:blur(8px);animation:hjExpiredToastIn 0.3s ease;pointer-events:none;';
 
         if (!document.getElementById('hj-expired-toast-style')) {
@@ -87,6 +90,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
             }, 1500);
             return false;
         }
+
         if (status.remainingMs > 0 && status.remainingMs !== Infinity) {
             setTimeout(function() {
                 const finalStatus = checkExperienceStatus();
@@ -149,8 +153,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
         modal.className = 'hj-modal-overlay';
         modal.setAttribute('data-type', 'activation');
         modal.style.zIndex = '1000007';
-        modal.innerHTML =
-            '<div class="hj-modal" style="max-width:420px;"><div class="hj-modal-title">🔑 激活</div><div class="hj-modal-content"><div style="margin-bottom:12px;color:rgba(255,255,255,0.8);font-size:13px;text-align:center;">输入激活码解锁全部功能</div><input type="text" id="hj-activation-input" class="hj-modal-input" placeholder="请输入激活码" style="text-align:center;font-size:16px;letter-spacing:2px;"><div id="hj-activation-status" style="text-align:center;font-size:12px;color:#ffd93d;min-height:20px;"></div></div><div class="hj-modal-actions"><button class="hj-modal-btn" id="hj-activation-close" style="width:100%;background:rgba(255,255,255,0.2);">关闭</button><button class="hj-modal-btn hj-modal-btn-primary" id="hj-activation-confirm" style="width:100%;">确认激活</button></div></div>';
+        modal.innerHTML = '<div class="hj-modal" style="max-width:420px;"><div class="hj-modal-title">🔑 激活</div><div class="hj-modal-content"><div style="margin-bottom:12px;color:rgba(255,255,255,0.8);font-size:13px;text-align:center;">输入激活码解锁全部功能</div><input type="text" id="hj-activation-input" class="hj-modal-input" placeholder="请输入激活码" style="text-align:center;font-size:16px;letter-spacing:2px;"><div id="hj-activation-status" style="text-align:center;font-size:12px;color:#ffd93d;min-height:20px;"></div></div><div class="hj-modal-actions"><button class="hj-modal-btn" id="hj-activation-close" style="width:100%;background:rgba(255,255,255,0.2);">关闭</button><button class="hj-modal-btn hj-modal-btn-primary" id="hj-activation-confirm" style="width:100%;">确认激活</button></div></div>';
 
         document.body.appendChild(modal);
 
@@ -202,6 +205,10 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
                 showGlobalToast('🎉 永久激活成功，所有功能已解锁');
                 var expiredToast = document.getElementById('hj-expired-toast');
                 if (expiredToast) expiredToast.remove();
+                var activationBtn = document.getElementById('hj-btn-activation');
+                if (activationBtn) {
+                    activationBtn.style.display = 'none';
+                }
                 setTimeout(closeModal, 1500);
                 return;
             }
@@ -1240,7 +1247,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
                 e.preventDefault();
 
                 if (!isFunctionAvailable()) {
-                    showGlobalToast('⏰ 体验时间已到，请打开🔒输入激活码');
+                    showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
                     return;
                 }
 
@@ -1262,7 +1269,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
                 e.preventDefault();
 
                 if (!isFunctionAvailable()) {
-                    showGlobalToast('⏰ 体验时间已到，请打开🔒输入激活码');
+                    showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
                     return;
                 }
 
@@ -1296,7 +1303,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
                 e.preventDefault();
 
                 if (!isFunctionAvailable()) {
-                    showGlobalToast('⏰ 体验时间已到，请打开🔒输入激活码');
+                    showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
                     return;
                 }
 
@@ -1836,7 +1843,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
 
     async function playVideoInPage(m3u8Url) {
         if (!isFunctionAvailable()) {
-            showGlobalToast('⏰ 体验时间已到，请打开🔒输入激活码');
+            showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
             return;
         }
 
@@ -1982,7 +1989,7 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
 
     async function downloadVideo() {
         if (!isFunctionAvailable()) {
-            showGlobalToast('⏰ 体验时间已到，请打开🔒输入激活码');
+            showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
             return;
         }
 
@@ -2392,9 +2399,23 @@ try {const data = localStorage.getItem(STORAGE_KEY);if (data) {const parsed = JS
     function init() {
         fetchRemoteConfig();
 
+        setInterval(function() {
+            fetchRemoteConfig();
+        }, 3 * 60 * 1000);
+
+        var permanent = localStorage.getItem('hj_permanent_activated') === 'true';
+        if (permanent) {
+            setTimeout(function() {
+                var activationBtn = document.getElementById('hj-btn-activation');
+                if (activationBtn) {
+                    activationBtn.style.display = 'none';
+                }
+            }, 1000);
+        }
+
         var expOk = initExperienceCheck();
         if (!expOk) {
-            console.log('⏰ 体验时间已到，请打开🔒输入激活码');
+            console.log('⏰ 体验时间已到期，请打开🔒按钮激活');
         }
 
         checkLocalVersionUpdate();
