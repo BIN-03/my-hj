@@ -7,7 +7,6 @@
 // @include      *://h6*.*/*
 // @match        https://haijiao.com/*
 // @match        https://*.haijiao.com/*
-// @match        https://hj251101e0b.top/*
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_addStyle
