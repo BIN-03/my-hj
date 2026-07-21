@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.19
+// @version      1.3.20
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -19,7 +19,7 @@
 // @license      MIT
 // ==/UserScript==
 (function() {
-    'use strict';const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/2d29551cb121311ef8e8e4eabdde62c081dee58d/config.json';const EXPERIENCE_DURATION = 0x124F80;const STORAGE_KEY = 'hj_experience_data';let remoteConfig = null;let configLoaded = false;function getExperienceData() {try {const data = localStorage.getItem(STORAGE_KEY);
+    'use strict';const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/config.json';const EXPERIENCE_DURATION = 0x124F80;const STORAGE_KEY = 'hj_experience_data';let remoteConfig = null;let configLoaded = false;function getExperienceData() {try {const data = localStorage.getItem(STORAGE_KEY);
 if (data) {const parsed = JSON.parse(data);return {startTime: parsed.startTime || 0,locked: parsed.locked || false,firstUse: parsed.firstUse !== undefined ? parsed.firstUse : true};}} catch (e) {console.warn('读取体验数据失败:', e);}return { startTime: 0, locked: false, firstUse: true };}
 
     function saveExperienceData(startTime, locked, firstUse) {
