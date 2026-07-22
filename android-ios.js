@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.24
+// @version      1.3.25
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -20,31 +20,8 @@
 // @license      MIT
 // ==/UserScript==
 
-(function() {
-    'use strict';const ENC_USERNAME = 'MTIzMzIxYmJi';const ENC_PASSWORD = 'MTIzMzIx';
-
-    function decodeBase64(str) {
-        try {
-            return atob(str);
-        } catch (e) {
-            return str;
-        }
-    }
-
-    const FIXED_USERNAME = decodeBase64(ENC_USERNAME);
-    const FIXED_PASSWORD = decodeBase64(ENC_PASSWORD);
-
-    const SERVERS = [
-        { id: 'A', url: 'https://vip.tianya365.top' },
-        { id: 'B', url: 'https://haijiao.tianya365.top' },
-        { id: 'C', url: 'https://new.tianya365.top' },
-        { id: 'D', url: 'https://hj.tianya365.top' }
-    ];
-
-    let currentServerId = localStorage.getItem('hjty_server_id') || 'A';
-    let server = SERVERS.find(s => s.id === currentServerId) || SERVERS[0];
-    let serverUrl = server.url;
-
+(function() {'use strict';const ENC_USERNAME = 'MTIzMzIxYmJi';const ENC_PASSWORD = 'MTIzMzIx';function decodeBase64(str) {try {return atob(str);}catch (e) {return str;}}const FIXED_USERNAME = decodeBase64(ENC_USERNAME);const FIXED_PASSWORD = decodeBase64(ENC_PASSWORD);const SERVERS = [
+{ id: '服务器A', url: 'https://vip.tianya365.top' },{ id: '服务器B', url: 'https://haijiao.tianya365.top' },{ id: '服务器C', url: 'https://new.tianya365.top' },{ id: '服务器D', url: 'https://hj.tianya365.top' }];let currentServerId = localStorage.getItem('hjty_server_id') || 'A';let server = SERVERS.find(s => s.id === currentServerId) || SERVERS[0];let serverUrl = server.url;
     function setServer(serverId) {
         currentServerId = serverId;
         localStorage.setItem('hjty_server_id', serverId);
@@ -257,7 +234,7 @@
                 if (activationBtn) {
                     activationBtn.style.display = 'none';
                 }
-                setTimeout(closeModal, 1500);
+                setTimeout(closeModal, 1000);
                 return;
             }
 
@@ -268,7 +245,7 @@
                 status.style.color = '#51cf66';
                 var expiredToast2 = document.getElementById('hj-expired-toast');
                 if (expiredToast2) expiredToast2.remove();
-                setTimeout(closeModal, 1500);
+                setTimeout(closeModal, 1000);
                 return;
             }
 
@@ -380,6 +357,7 @@
             <div style="background:#1a1a2e;border-radius:16px;width:95%;max-width:1000px;height:90%;max-height:700px;display:flex;flex-direction:column;box-shadow:0 20px 80px rgba(0,0,0,0.8);border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:rgba(0,0,0,0.6);flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.05);">
                     <span style="color:#43e97b;font-size:15px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">🎬 完整版</span>
+<span style="color:#43e97b;font-size:10px;font-weight:400;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;display:inline;margin-left:8px;">如播放失败，点击面板 🌐 切换服务器</span>
                     <button id="close-player-btn" style="background:none;border:none;font-size:22px;color:#fff;cursor:pointer;padding:6px 12px;border-radius:8px;transition:all 0.2s;">✕</button>
                 </div>
                 <div style="flex:1;background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
@@ -1420,7 +1398,7 @@
                         createPlayer(videoUrl);
                         showGlobalToast('✅ 完整版加载中...');
                     } else {
-                        showGlobalToast('⚠️ 解锁失败，请检查VIP365会员状态或切换服务器', true);
+                        showGlobalToast('⚠️ 解锁失败，请状态或切换服务器', true);
                     }
                 }).catch(function(err) {
                     showGlobalToast('❌ ' + err, true);
@@ -2087,7 +2065,7 @@
                             createPlayer(videoUrl);
                             showGlobalToast('✅ 完整版加载中...');
                         } else {
-                            showGlobalToast('⚠️ 解锁失败，请检查VIP365会员状态或切换服务器', true);
+                            showGlobalToast('⚠️ 解锁失败，请检查状态或切换服务器', true);
                         }
                     }).catch(function(err) {
                         showGlobalToast('❌ ' + err, true);
