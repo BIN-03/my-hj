@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.33
+// @version      1.3.24
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://h6*.*/*
+// @include      *://hj*.*/*
 // @match        https://haijiao.com/*
 // @match        https://*.haijiao.com/*
 // @match        https://hj251101e0b.top/*
