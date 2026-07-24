@@ -1,14 +1,12 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.25
+// @version      1.3.30
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
 // @include      *://h6*.*/*
-// @include      *://hj*.*/*
 // @match        https://haijiao.com/*
 // @match        https://*.haijiao.com/*
-// @match        https://hj251101e0b.top/*
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_addStyle
@@ -19,81 +17,20 @@
 // @grant        GM_xmlhttpRequest
 // @license      MIT
 // ==/UserScript==
-
-(function() {'use strict';const ENC_USERNAME = 'MTIzMzIxYmJi';const ENC_PASSWORD = 'MTIzMzIx';function decodeBase64(str) {try {return atob(str);}catch (e) {return str;}}const FIXED_USERNAME = decodeBase64(ENC_USERNAME);const FIXED_PASSWORD = decodeBase64(ENC_PASSWORD);const SERVERS = [
-{ id: '服务器A', url: 'https://vip.tianya365.top' },{ id: '服务器B', url: 'https://haijiao.tianya365.top' },{ id: '服务器C', url: 'https://new.tianya365.top' },{ id: '服务器D', url: 'https://hj.tianya365.top' }];let currentServerId = localStorage.getItem('hjty_server_id') || 'A';let server = SERVERS.find(s => s.id === currentServerId) || SERVERS[0];let serverUrl = server.url;
-    function setServer(serverId) {
-        currentServerId = serverId;
-        localStorage.setItem('hjty_server_id', serverId);
-        server = SERVERS.find(s => s.id === serverId) || SERVERS[0];
-        serverUrl = server.url;
-        localStorage.removeItem('hjty_user_token');
-        var btn = document.getElementById('hj-server-btn');
-        if (btn) btn.textContent = '🌐 ' + serverId;
-        showGlobalToast('🔄 已切换到服务器 ' + serverId);
-    }
-
-    function showServerMenu() {
-        var existing = document.getElementById('hj-server-menu');
-        if (existing) {
-            existing.remove();
-            return;
+(function() {'use strict';const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/config.json';const EXPERIENCE_DURATION = 0x124F80;const STORAGE_KEY = 'hj_experience_data';let remoteConfig = null;let configLoaded = false;
+const KITTY_TOKEN = 'xfPnLBd21s';const KITTY_API_HOST = 'https://www.kittymao.xyz/api';function getExperienceData() {try {const data = localStorage.getItem(STORAGE_KEY);if (data) {
+            const parsed = JSON.parse(data);
+            return {
+                startTime: parsed.startTime || 0,
+                locked: parsed.locked || false,
+                firstUse: parsed.firstUse !== undefined ? parsed.firstUse : true
+            };
         }
-
-        var menu = document.createElement('div');
-        menu.id = 'hj-server-menu';
-        menu.style.cssText = 'position:fixed;bottom:180px;right:20px;z-index:99999999;background:rgba(20,20,40,0.95);backdrop-filter:blur(20px);border-radius:14px;padding:8px;border:1px solid rgba(255,255,255,0.15);box-shadow:0 12px 48px rgba(0,0,0,0.6);min-width:80px;';
-
-        SERVERS.forEach(function(s) {
-            var btn = document.createElement('button');
-            btn.textContent = s.id;
-            btn.style.cssText = 'display:block;width:100%;padding:12px 24px;border:none;border-radius:8px;background:' + (s.id === currentServerId ? 'rgba(67,233,123,0.25)' : 'transparent') + ';color:' + (s.id === currentServerId ? '#43e97b' : '#fff') + ';font-size:16px;font-weight:700;cursor:pointer;font-family:sans-serif;text-align:center;transition:all 0.2s;margin-bottom:2px;';
-            btn.addEventListener('mouseenter', function() {
-                this.style.background = 'rgba(255,255,255,0.1)';
-            });
-            btn.addEventListener('mouseleave', function() {
-                this.style.background = s.id === currentServerId ? 'rgba(67,233,123,0.25)' : 'transparent';
-            });
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                setServer(s.id);
-                menu.remove();
-            });
-            menu.appendChild(btn);
-        });
-
-        document.body.appendChild(menu);
-
-        setTimeout(function() {
-            document.addEventListener('click', function closeMenu(e) {
-                if (!menu.contains(e.target) && e.target.id !== 'hj-server-btn') {
-                    menu.remove();
-                    document.removeEventListener('click', closeMenu);
-                }
-            });
-        }, 10);
+    } catch (e) {
+        console.warn('读取体验数据失败:', e);
     }
-
-    const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/config.json';
-    const EXPERIENCE_DURATION = 0x124F80;
-    const STORAGE_KEY = 'hj_experience_data';
-    let remoteConfig = null;
-    let configLoaded = false;
-
-    function getExperienceData() {
-        try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            if (data) {
-                const parsed = JSON.parse(data);
-                return {
-                    startTime: parsed.startTime || 0,
-                    locked: parsed.locked || false,
-                    firstUse: parsed.firstUse !== undefined ? parsed.firstUse : true
-                };
-            }
-        } catch (e) {}
-        return { startTime: 0, locked: false, firstUse: true };
-    }
+    return { startTime: 0, locked: false, firstUse: true };
+}
 
     function saveExperienceData(startTime, locked, firstUse) {
         try {
@@ -103,7 +40,9 @@
                 firstUse: firstUse !== undefined ? firstUse : true
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        } catch (e) {}
+        } catch (e) {
+            console.warn('保存体验数据失败:', e);
+        }
     }
 
     function checkExperienceStatus() {
@@ -129,9 +68,55 @@
         return { isExpired: false, remainingMs: remaining, locked: false };
     }
 
+    function showExpiredToast() {
+        const existing = document.getElementById('hj-expired-toast');
+        if (existing) return;
+        const toast = document.createElement('div');
+        toast.id = 'hj-expired-toast';
+        toast.textContent = '⏰ 体验时间已到';
+        toast.style.cssText = 'position:fixed;top:20px;right:20px;background:rgba(220,53,69,0.95);color:white;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;z-index:10000000;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 4px 15px rgba(220,53,69,0.4);backdrop-filter:blur(8px);animation:hjExpiredToastIn 0.3s ease;pointer-events:none;';
+        if (!document.getElementById('hj-expired-toast-style')) {
+            const style = document.createElement('style');
+            style.id = 'hj-expired-toast-style';
+            style.textContent = '@keyframes hjExpiredToastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}';
+            document.head.appendChild(style);
+        }
+        document.body.appendChild(toast);
+        setTimeout(function() {
+            if (toast && toast.remove) toast.remove();
+        }, 5000);
+    }
+
+    function initExperienceCheck() {
+        const status = checkExperienceStatus();
+        if (status.locked || status.isExpired) {
+            setTimeout(function() {
+                showExpiredToast();
+            }, 1500);
+            return false;
+        }
+        if (status.remainingMs > 0 && status.remainingMs !== Infinity) {
+            setTimeout(function() {
+                const finalStatus = checkExperienceStatus();
+                if (finalStatus.locked || finalStatus.isExpired) {
+                    showExpiredToast();
+                }
+            }, status.remainingMs + 500);
+        }
+        return true;
+    }
+
     function isFunctionAvailable() {
         var status = checkExperienceStatus();
         return !(status.locked || status.isExpired);
+    }
+
+    function lockAllFunctions() {
+        var status = getExperienceData();
+        if (!status.locked) {
+            saveExperienceData(status.startTime, true, false);
+        }
+        showExpiredToast();
     }
 
     async function fetchRemoteConfig() {
@@ -155,46 +140,30 @@
                 }
                 return data;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('❌ 获取远程配置失败', e);
+        }
         return null;
     }
 
     function showActivationModal() {
         var existing = document.querySelector('.hj-modal-overlay[data-type="activation"]');
         if (existing) return;
-
         var modal = document.createElement('div');
         modal.className = 'hj-modal-overlay';
         modal.setAttribute('data-type', 'activation');
         modal.style.zIndex = '1000007';
-        modal.innerHTML = `
-            <div class="hj-modal" style="max-width:420px;">
-                <div class="hj-modal-title">🔑 激活</div>
-                <div class="hj-modal-content">
-                    <div style="margin-bottom:12px;color:rgba(255,255,255,0.8);font-size:13px;text-align:center;">输入激活码解锁全部功能</div>
-                    <input type="text" id="hj-activation-input" class="hj-modal-input" placeholder="请输入激活码" style="text-align:center;font-size:16px;letter-spacing:2px;">
-                    <div id="hj-activation-status" style="text-align:center;font-size:12px;color:#ffd93d;min-height:20px;"></div>
-                </div>
-                <div class="hj-modal-actions">
-                    <button class="hj-modal-btn" id="hj-activation-close" style="width:100%;background:rgba(255,255,255,0.2);">关闭</button>
-                    <button class="hj-modal-btn hj-modal-btn-primary" id="hj-activation-confirm" style="width:100%;">确认激活</button>
-                </div>
-            </div>
-        `;
-
+        modal.innerHTML = '<div class="hj-modal" style="max-width:420px;"><div class="hj-modal-title">🔑 激活</div><div class="hj-modal-content"><div style="margin-bottom:12px;color:rgba(255,255,255,0.8);font-size:13px;text-align:center;">输入激活码解锁全部功能</div><input type="text" id="hj-activation-input" class="hj-modal-input" placeholder="请输入激活码" style="text-align:center;font-size:16px;letter-spacing:2px;"><div id="hj-activation-status" style="text-align:center;font-size:12px;color:#ffd93d;min-height:20px;"></div></div><div class="hj-modal-actions"><button class="hj-modal-btn" id="hj-activation-close" style="width:100%;background:rgba(255,255,255,0.2);">关闭</button><button class="hj-modal-btn hj-modal-btn-primary" id="hj-activation-confirm" style="width:100%;">确认激活</button></div></div>';
         document.body.appendChild(modal);
-
         var input = document.getElementById('hj-activation-input');
         var status = document.getElementById('hj-activation-status');
         var confirmBtn = document.getElementById('hj-activation-confirm');
         var closeBtn = document.getElementById('hj-activation-close');
-
         var closeModal = function() {
             modal.remove();
             setPanelModalMode(false);
             ensurePanelVisible();
         };
-
         var handleActivation = function() {
             var code = input.value.trim();
             if (!code) {
@@ -216,11 +185,9 @@
             }
             processActivation(code);
         };
-
         var processActivation = function(code) {
             var renewalCode = remoteConfig.renewalTime || '';
             var activationCode = remoteConfig.activationCode || '';
-
             if (code === activationCode && activationCode) {
                 var data = getExperienceData();
                 saveExperienceData(data.startTime || Date.now(), false, false);
@@ -234,10 +201,9 @@
                 if (activationBtn) {
                     activationBtn.style.display = 'none';
                 }
-                setTimeout(closeModal, 1000);
+                setTimeout(closeModal, 1500);
                 return;
             }
-
             if (code === renewalCode && renewalCode) {
                 var now = Date.now();
                 saveExperienceData(now, false, false);
@@ -245,16 +211,14 @@
                 status.style.color = '#51cf66';
                 var expiredToast2 = document.getElementById('hj-expired-toast');
                 if (expiredToast2) expiredToast2.remove();
-                setTimeout(closeModal, 1000);
+                setTimeout(closeModal, 1500);
                 return;
             }
-
             status.textContent = '❌ 激活码无效，请重试';
             status.style.color = '#ff6b6b';
             input.value = '';
             input.focus();
         };
-
         confirmBtn.addEventListener('click', handleActivation);
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') handleActivation();
@@ -263,179 +227,13 @@
         modal.addEventListener('click', function(e) {
             if (e.target === modal) closeModal();
         });
-
         setPanelModalMode(true);
         setTimeout(function() {
             input.focus();
         }, 300);
     }
 
-    function loginToVIP365() {
-        return new Promise(function(resolve, reject) {
-            var token = localStorage.getItem('hjty_user_token');
-            if (token) {
-                resolve(true);
-                return;
-            }
-            fetch(serverUrl + '/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: FIXED_USERNAME, password: FIXED_PASSWORD })
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                if (data.code === 0 && data.token) {
-                    localStorage.setItem('hjty_user_token', data.token);
-                    resolve(true);
-                } else {
-                    reject(data.msg || '登录失败');
-                }
-            })
-            .catch(function(e) { reject(e.message); });
-        });
-    }
-
-    function unlockVideo(pid) {
-        return new Promise(function(resolve) {
-            var token = localStorage.getItem('hjty_user_token');
-            if (!token) {
-                resolve(null);
-                return;
-            }
-            fetch(serverUrl + '/api/topic/' + pid + '?v=2.1.3', {
-                method: 'GET',
-                headers: { 'token': token, 'Content-Type': 'application/json' }
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                if (data.code === 0 || data.code === 1) {
-                    if (data.data && data.data.m3u8_url) {
-                        var url = data.data.m3u8_url;
-                        if (!url.startsWith('http')) {
-                            url = serverUrl + url;
-                        }
-                        resolve(url);
-                    } else {
-                        resolve('use_remote');
-                    }
-                } else {
-                    resolve(null);
-                }
-            })
-            .catch(function() { resolve(null); });
-        });
-    }
-
-    function getPid() {
-        if (/\/post\/details.*pid=\d+/.test(location.href)) {
-            var match = location.href.match(/\/post\/details.*pid=(\d+)/i);
-            return match ? match[1] : null;
-        }
-        var m = location.pathname.match(/\/topic\/(\d+)/);
-        if (m) return m[1];
-        return null;
-    }
-
-    function createPlayer(m3u8Url) {
-        if (!m3u8Url) {
-            showGlobalToast('❌ 视频地址无效', true);
-            return;
-        }
-
-        var proxyUrl = serverUrl + '/play?url=' + btoa(encodeURIComponent(m3u8Url).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-            return String.fromCharCode(parseInt(p1, 16));
-        }));
-
-        var existing = document.getElementById('video-player-overlay');
-        if (existing) existing.remove();
-
-        var overlay = document.createElement('div');
-        overlay.id = 'video-player-overlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:10000001;display:flex;justify-content:center;align-items:center;';
-
-        overlay.innerHTML = `
-            <div style="background:#1a1a2e;border-radius:16px;width:95%;max-width:1000px;height:90%;max-height:700px;display:flex;flex-direction:column;box-shadow:0 20px 80px rgba(0,0,0,0.8);border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:rgba(0,0,0,0.6);flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <span style="color:#43e97b;font-size:15px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">🎬 完整版</span>
-<span style="color:#43e97b;font-size:10px;font-weight:400;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;display:inline;margin-left:8px;">如播放失败，点击面板 🌐 切换服务器</span>
-                    <button id="close-player-btn" style="background:none;border:none;font-size:22px;color:#fff;cursor:pointer;padding:6px 12px;border-radius:8px;transition:all 0.2s;">✕</button>
-                </div>
-                <div style="flex:1;background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-                    <iframe style="display:block;border:0;width:100%;height:100%;" allow="autoplay; encrypted-media; fullscreen" allowfullscreen src="${proxyUrl}"></iframe>
-                    <div id="video-loading-tip" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,0.6);font-size:14px;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none;">
-                        <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #667eea;border-radius:50%;animation:hjSpin 1s linear infinite;"></div>
-                        <span>加载视频中...</span>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        if (!document.getElementById('hj-spin-style')) {
-            var spinStyle = document.createElement('style');
-            spinStyle.id = 'hj-spin-style';
-            spinStyle.textContent = '@keyframes hjSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}';
-            document.head.appendChild(spinStyle);
-        }
-
-        document.body.appendChild(overlay);
-
-        var closeBtn = document.getElementById('close-player-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', function() {
-                overlay.remove();
-            });
-            closeBtn.addEventListener('mouseenter', function() {
-                this.style.background = 'rgba(255,255,255,0.1)';
-            });
-            closeBtn.addEventListener('mouseleave', function() {
-                this.style.background = 'none';
-            });
-        }
-
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) overlay.remove();
-        });
-
-        var escHandler = function(e) {
-            if (e.key === 'Escape') {
-                overlay.remove();
-                document.removeEventListener('keydown', escHandler);
-            }
-        };
-        document.addEventListener('keydown', escHandler);
-
-        var loadingTip = document.getElementById('video-loading-tip');
-        var iframe = overlay.querySelector('iframe');
-        if (iframe) {
-            iframe.addEventListener('load', function() {
-                if (loadingTip) loadingTip.style.display = 'none';
-            });
-            setTimeout(function() {
-                if (loadingTip) loadingTip.style.display = 'none';
-            }, 5000);
-        }
-    }
-
-    function downloadVideo() {
-        var url = lastFullUrl || capturedM3u8Url;
-        if (!url) {
-            showGlobalToast('❌ 未捕获到视频地址', true);
-            return;
-        }
-
-        var proxyUrl = serverUrl + '/play?url=' + btoa(encodeURIComponent(url).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-            return String.fromCharCode(parseInt(p1, 16));
-        }));
-
-        var a = document.createElement('a');
-        a.href = proxyUrl;
-        a.target = '_blank';
-        a.download = 'video.m3u8';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        showGlobalToast('📥 正在打开下载...');
-    }
+    var currentPlayingUrl = null;
 
     function getCurrentVersion() {
         if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) {
@@ -446,6 +244,42 @@
 
     var SCRIPT_VERSION = getCurrentVersion();
     var GITHUB_VERSION_URL = 'https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
+
+    var hlsLoaded = false;
+    var hlsLoading = false;
+
+    function loadHls() {
+        return new Promise(function(resolve, reject) {
+            if (typeof Hls !== 'undefined') {
+                hlsLoaded = true;
+                resolve();
+                return;
+            }
+            if (hlsLoading) {
+                var check = setInterval(function() {
+                    if (typeof Hls !== 'undefined') {
+                        clearInterval(check);
+                        hlsLoaded = true;
+                        resolve();
+                    }
+                }, 100);
+                return;
+            }
+            hlsLoading = true;
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js';
+            script.onload = function() {
+                hlsLoaded = true;
+                hlsLoading = false;
+                resolve();
+            };
+            script.onerror = function() {
+                hlsLoading = false;
+                reject(new Error('HLS.js 加载失败'));
+            };
+            document.head.appendChild(script);
+        });
+    }
 
     function showAnnouncementToast(text) {
         var existing = document.getElementById('hj-announcement-toast');
@@ -461,13 +295,17 @@
             document.head.appendChild(style);
         }
         document.body.appendChild(toast);
-        setTimeout(function() { if (toast && toast.remove) toast.remove(); }, 2000);
+        setTimeout(function() {
+            if (toast && toast.remove) toast.remove();
+        }, 2000);
     }
 
     function updateAnnouncementBadge() {
         var btn = document.getElementById('hj-btn-announcement');
         if (!btn) {
-            setTimeout(function() { updateAnnouncementBadge(); }, 500);
+            setTimeout(function() {
+                updateAnnouncementBadge();
+            }, 500);
             return;
         }
         var read = GM_getValue('announcement_read', false);
@@ -493,7 +331,6 @@
         }
         GM_setValue('announcement_read', true);
         updateAnnouncementBadge();
-
         var existing = document.querySelector('.hj-modal-overlay[data-type="announcement"]');
         if (existing) {
             if (existing.scrollIntoView) {
@@ -501,7 +338,6 @@
             }
             return;
         }
-
         var modal = document.createElement('div');
         modal.className = 'hj-modal-overlay';
         modal.setAttribute('data-type', 'announcement');
@@ -626,7 +462,9 @@
                 document.head.appendChild(style);
             }
             document.body.appendChild(toast);
-            setTimeout(function() { if (toast && toast.remove) toast.remove(); }, 2000);
+            setTimeout(function() {
+                if (toast && toast.remove) toast.remove();
+            }, 2000);
         } catch (e) {}
     }
 
@@ -742,9 +580,13 @@
                         p.style.opacity = '1';
                         if (!p.style.zIndex) p.style.zIndex = '999999';
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.error(e);
+                }
             }, 3000);
-        } catch (e) {}
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     function ensurePanelVisible() {
@@ -754,7 +596,9 @@
                 try {
                     createControlPanel();
                     p = getFloatingPanel();
-                } catch (e) {}
+                } catch (e) {
+                    console.error(e);
+                }
             }
             if (p) {
                 p.style.zIndex = '999999';
@@ -804,7 +648,9 @@
             if (!on) {
                 p.style.display = 'block';
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     var currentHlsInstance = null;
@@ -1362,50 +1208,15 @@
             playBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-
                 if (!isFunctionAvailable()) {
                     showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
                     return;
                 }
-
-                var pid = getPid();
-                if (!pid) {
-                    showGlobalToast('❌ 请进入帖子页面');
+                if (!isFullReady()) {
+                    showGlobalToast('视频还在解析中，请等几秒钟哦~');
                     return;
                 }
-
-                var hasVideo = capturedM3u8Url || lastFullUrl;
-                if (hasVideo) {
-                    var url = lastFullUrl || capturedM3u8Url;
-                    if (url && !/_preview/i.test(url)) {
-                        createPlayer(url);
-                        return;
-                    }
-                }
-
-                showGlobalToast('🔄 正在获取完整视频...');
-                playBtn.textContent = '⏳';
-                playBtn.disabled = true;
-
-                loginToVIP365().then(function() {
-                    return unlockVideo(pid);
-                }).then(function(videoUrl) {
-                    if (videoUrl && videoUrl !== 'use_remote') {
-                        lastFullUrl = videoUrl;
-                        sigFull = currentSig();
-                        capturedM3u8Url = videoUrl;
-                        sigCaptured = currentSig();
-                        createPlayer(videoUrl);
-                        showGlobalToast('✅ 完整版加载中...');
-                    } else {
-                        showGlobalToast('⚠️ 解锁失败，请状态或切换服务器', true);
-                    }
-                }).catch(function(err) {
-                    showGlobalToast('❌ ' + err, true);
-                }).finally(function() {
-                    playBtn.textContent = '▶';
-                    playBtn.disabled = false;
-                });
+                playFullVideo();
             });
         }
     }
@@ -1417,12 +1228,14 @@
             downloadBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-
                 if (!isFunctionAvailable()) {
                     showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
                     return;
                 }
-
+                if (!isFullReady()) {
+                    showGlobalToast('视频还在解析中，请等几秒钟哦~');
+                    return;
+                }
                 downloadVideo();
             });
         }
@@ -1447,12 +1260,10 @@
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 e.preventDefault();
-
                 if (!isFunctionAvailable()) {
                     showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
                     return;
                 }
-
                 var notReady = !isFullReady();
                 if (notReady && !isSignatureAligned()) {
                     if (!window.__hj_recap_inflight) {
@@ -1820,7 +1631,7 @@
 
         var panel = document.createElement('div');
         panel.className = 'hj-floating-panel';
-        panel.innerHTML = '<div class="hj-panel-container"><button class="hj-toggle-btn" id="hj-toggle-btn" title="拖动移动 | 点击折叠"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg></button><div class="hj-panel-content"><div class="hj-buttons"><button class="hj-btn hj-btn-play" id="hj-btn-play" title="播放视频"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></button><button class="hj-btn hj-btn-download" id="hj-btn-download" title="下载视频"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button><button class="hj-btn hj-btn-activation" id="hj-btn-activation" title="激活"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></button><button class="hj-btn hj-btn-announcement" id="hj-btn-announcement" title="公告"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><circle cx="12" cy="4" r="1" fill="white"/></svg></button><button class="hj-btn hj-btn-qq" id="hj-btn-qq" title="联系作者"><img src="//pub.idqqimg.com/wpa/images/group.png" style="width:61px;height:30px;"></button><button id="hj-server-btn" class="hj-btn" style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);color:#fff;font-weight:700;font-size:14px;font-family:sans-serif;border-radius:14px;">🌐 ' + currentServerId + '</button></div></div></div>';
+        panel.innerHTML = '<div class="hj-panel-container"><button class="hj-toggle-btn" id="hj-toggle-btn" title="拖动移动 | 点击折叠"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg></button><div class="hj-panel-content"><div class="hj-buttons"><button class="hj-btn hj-btn-play" id="hj-btn-play" title="播放视频"><svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></button><button class="hj-btn hj-btn-download" id="hj-btn-download" title="下载视频"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button><button class="hj-btn hj-btn-activation" id="hj-btn-activation" title="激活"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></button><button class="hj-btn hj-btn-announcement" id="hj-btn-announcement" title="公告"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><circle cx="12" cy="4" r="1" fill="white"/></svg></button><button class="hj-btn hj-btn-qq" id="hj-btn-qq" title="联系作者"><img src="//pub.idqqimg.com/wpa/images/group.png" style="width:61px;height:30px;"></button></div></div></div>';
 
         document.body.appendChild(panel);
         setupPanelEvents(panel);
@@ -1842,15 +1653,6 @@
                 e.stopPropagation();
                 e.preventDefault();
                 showAnnouncementModal();
-            });
-        }
-
-        var serverBtn = document.getElementById('hj-server-btn');
-        if (serverBtn) {
-            serverBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                showServerMenu();
             });
         }
 
@@ -1947,7 +1749,6 @@
                 return showAnnouncementModal();
             }
             if (btn.id === 'hj-btn-qq') return handleQQGroup();
-            if (btn.id === 'hj-server-btn') return;
         }, 300);
 
         panel.addEventListener('click', onClick);
@@ -1961,8 +1762,233 @@
         if (downloadBtn) downloadBtn.classList.toggle('hj-btn-ready', on);
     }
 
-    async function resolveFullFromServer(payload) {
-        return null;
+    function getTopicId() {
+        const params = new URLSearchParams(location.search);
+        return params.get('pid') || params.get('id') || '';
+    }
+
+    function doKittyLogin() {
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: KITTY_API_HOST + '/hj/getPermission',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    version: '1.1.3',
+                    cardContent: KITTY_TOKEN,
+                    nickname: 'hj'
+                }),
+                onload: function(res) {
+                    try {
+                        const result = JSON.parse(res.responseText);
+                        if (result && result.success && result.data && result.data.token) {
+                            localStorage.setItem('kthjau', result.data.token);
+                            resolve(true);
+                        } else {
+                            resolve(false);
+                        }
+                    } catch(e) {
+                        resolve(false);
+                    }
+                },
+                onerror: function() {
+                    resolve(false);
+                }
+            });
+        });
+    }
+
+    function getVideoIdFromTopic(topicId) {
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: location.origin + '/api/topic/' + topicId,
+                credentials: true,
+                headers: {
+                    'Cache-Control': 'no-cache'
+                },
+                onload: function(res) {
+                    try {
+                        const data = JSON.parse(res.responseText);
+                        let body = null;
+                        if (data && data.data) {
+                            try {
+                                body = JSON.parse(atob(atob(atob(data.data))));
+                            } catch(e) {
+                                try {
+                                    body = JSON.parse(atob(atob(data.data)));
+                                } catch(e2) {
+                                    try {
+                                        body = JSON.parse(data.data);
+                                    } catch(e3) {}
+                                }
+                            }
+                        }
+                        if (!body && typeof data.data === 'object') {
+                            body = data.data;
+                        }
+                        if (body && body.attachments) {
+                            for (let att of body.attachments) {
+                                if (att && att.category === 'video') {
+                                    resolve(att.id);
+                                    return;
+                                }
+                            }
+                        }
+                        resolve(null);
+                    } catch(e) {
+                        resolve(null);
+                    }
+                },
+                onerror: function() {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    function getVideoUrlFromKitty(videoId, topicId) {
+        return new Promise((resolve) => {
+            const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const token = localStorage.getItem('kthjau') || KITTY_TOKEN;
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: KITTY_API_HOST + '/hj/movieInfo?kthjau=' + token + '&isPhone=' + isPhone,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    id: Number(videoId),
+                    line: '',
+                    resource_id: Number(topicId),
+                    resource_type: 'topic'
+                }),
+                onload: function(res) {
+                    try {
+                        const result = JSON.parse(res.responseText);
+                        if (result && result.success && result.data && result.data.remoteUrl) {
+                            resolve(result.data.remoteUrl);
+                        } else {
+                            resolve(null);
+                        }
+                    } catch(e) {
+                        resolve(null);
+                    }
+                },
+                onerror: function() {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    function showVideoPlayer(url) {
+        destroyPlayer();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'video-player-overlay';
+        overlay.innerHTML = '<div class="video-player-container"><div class="video-header"><h3>🎬 完整视频播放</h3><button class="close-btn" id="close-player-btn">✕</button></div><div class="video-tips">💡 如果视频不能正常播放请检查您的网络环境，支持拖动，倍速播放哦~</div><video id="hls-video" controls autoplay style="width:100%;max-height:70vh;background:#000;">您的浏览器不支持视频播放</video></div>';
+
+        GM_addStyle('#video-player-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:99999;display:flex;justify-content:center;align-items:center;}.video-player-container{background:white;border-radius:15px;padding:20px;max-width:90%;box-shadow:0 10px 50px rgba(0,0,0,0.5);}.video-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}.video-header h3{margin:0;color:#333;font-size:16px;font-weight:600;}.video-tips{font-size:12px;color:#666;text-align:center;margin-bottom:12px;padding:8px 12px;background:#f8f9fa;border-radius:8px;line-height:1.5;}.close-btn{background:#ff4757;color:white;border:none;border-radius:50%;width:35px;height:35px;font-size:20px;cursor:pointer;transition:all 0.2s;}.close-btn:hover{background:#ff3838;transform:scale(1.1);}#hls-video{cursor:pointer;user-select:none;}');
+
+        document.body.appendChild(overlay);
+
+        var closeBtn = document.getElementById('close-player-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', destroyPlayer);
+        }
+
+        var videoElement = document.getElementById('hls-video');
+
+        loadHls().then(function() {
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                var hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60
+                });
+                currentHlsInstance = hls;
+                hls.loadSource(url);
+                hls.attachMedia(videoElement);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    videoElement.play().catch(function() {});
+                });
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        console.error('HLS fatal error:', data);
+                        alert('视频加载失败，请重试');
+                    }
+                });
+            } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                videoElement.src = url;
+                videoElement.play().catch(function() {});
+            } else {
+                alert('您的浏览器不支持HLS播放');
+            }
+        }).catch(function() {
+            if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                videoElement.src = url;
+                videoElement.play().catch(function() {});
+            } else {
+                alert('HLS.js加载失败');
+            }
+        });
+    }
+
+    async function playFullVideo() {
+        if (inFlightPlay) return;
+        if (!isFunctionAvailable()) {
+            showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
+            return;
+        }
+
+        inFlightPlay = true;
+
+        try {
+            var topicId = getTopicId();
+            if (!topicId) {
+                showGlobalToast('无法获取帖子ID');
+                inFlightPlay = false;
+                return;
+            }
+
+            var token = localStorage.getItem('kthjau');
+            if (!token) {
+                showGlobalToast('正在校验口令...');
+                var loginOk = await doKittyLogin();
+                if (!loginOk) {
+                    showGlobalToast('口令校验失败');
+                    inFlightPlay = false;
+                    return;
+                }
+            }
+
+            showGlobalToast('正在获取视频地址...');
+
+            var videoId = await getVideoIdFromTopic(topicId);
+            if (!videoId) {
+                showGlobalToast('未找到视频附件');
+                inFlightPlay = false;
+                return;
+            }
+
+            var videoUrl = await getVideoUrlFromKitty(videoId, topicId);
+            if (!videoUrl) {
+                showGlobalToast('获取视频地址失败');
+                inFlightPlay = false;
+                return;
+            }
+
+            showVideoPlayer(videoUrl);
+
+        } catch (e) {
+            showGlobalToast('播放失败: ' + e.message);
+        } finally {
+            inFlightPlay = false;
+        }
     }
 
     function destroyPlayer() {
@@ -1995,146 +2021,127 @@
         } catch (_) {}
     }
 
-    async function playFullVideo(allowPreview) {
-        if (allowPreview === undefined) allowPreview = false;
-        if (inFlightPlay) return;
-        inFlightPlay = true;
+    async function downloadVideo() {
+        if (!isFunctionAvailable()) {
+            showGlobalToast('⏰ 体验时间已到，请打开🔒按钮激活');
+            return;
+        }
 
-        try {
-            var epochAtStart = resolveEpoch;
-            var pageAtStart = currentPageUrl;
-
-            if (!capturedM3u8Url) {
-                showGlobalToast('正在定位视频源…');
-                var domUrl = findM3u8InDom();
-                if (domUrl) {
-                    capturedM3u8Url = domUrl;
-                }
-                await ensurePreviewTriggered(8, 500);
-                var waited = 0;
-                await new Promise(function(resolve) {
-                    var t = setInterval(function() {
-                        waited += 300;
-                        if (capturedM3u8Url) {
-                            clearInterval(t);
-                            resolve();
-                        } else if (waited >= 8000) {
-                            clearInterval(t);
-                            resolve();
-                        }
-                    }, 300);
-                });
-                if (!capturedM3u8Url || sigCaptured !== currentSig()) {
-                    showGlobalToast('未捕获到视频地址，请稍后重试');
-                    inFlightPlay = false;
-                    return;
-                }
+        var existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
+        if (existingModal) {
+            if (existingModal.scrollIntoView) {
+                existingModal.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            showGlobalToast('📥 下载窗口已打开');
+            return;
+        }
 
-            var preferred = await ensureFullBeforePlay(6000);
+        downloadOpen = true;
+        var initialUrl = lastFullUrl || capturedM3u8Url || null;
 
-            if (STRICT_MODE && !preferred) {
-                if (!(allowPreview && capturedM3u8Url && sigCaptured === currentSig())) {
-                    showGlobalToast('视频还在解析中，请等几秒钟哦~');
-                    inFlightPlay = false;
-                    return;
-                }
-            }
+        if (!initialUrl) {
+            showGlobalToast('❌ 未捕获到视频URL，请稍后重试');
+            downloadOpen = false;
+            return;
+        }
 
-            if (epochAtStart !== resolveEpoch || pageAtStart !== currentPageUrl) {
-                inFlightPlay = false;
-                return;
-            }
+        showDownloadModal(initialUrl, true);
 
-            var targetUrl = preferred || capturedM3u8Url;
-
-            if (targetUrl && !/_preview/i.test(targetUrl)) {
-                createPlayer(targetUrl);
-            } else {
-                var pid = getPid();
-                if (pid) {
-                    showGlobalToast('🔄 正在获取完整视频...');
-                    loginToVIP365().then(function() {
-                        return unlockVideo(pid);
-                    }).then(function(videoUrl) {
-                        if (videoUrl && videoUrl !== 'use_remote') {
-                            lastFullUrl = videoUrl;
-                            sigFull = currentSig();
-                            capturedM3u8Url = videoUrl;
-                            sigCaptured = currentSig();
-                            createPlayer(videoUrl);
-                            showGlobalToast('✅ 完整版加载中...');
-                        } else {
-                            showGlobalToast('⚠️ 解锁失败，请检查状态或切换服务器', true);
-                        }
-                    }).catch(function(err) {
-                        showGlobalToast('❌ ' + err, true);
-                    });
-                } else {
-                    showGlobalToast('⚠️ 无法获取帖子ID', true);
-                }
-            }
-
+        if (initialUrl && !isFullReady()) {
             try {
-                var tsSample2 = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
-                var fullUrl = await Promise.race([
-                    resolveFullFromServer({
-                        pageUrl: location.href,
-                        previewM3u8Url: capturedM3u8Url,
-                        tsSamples: tsSample2
-                    }),
-                    new Promise(function(res) { setTimeout(function() { res(null); }, 9000); })
-                ]);
-
-                if (!fullUrl && capturedM3u8Url && sigCaptured === currentSig()) {
-                    fullUrl = await localGuessFullM3U8(capturedM3u8Url, tsSample2[0] || '');
-                }
-
-                if (fullUrl) {
-                    if (epochAtStart === resolveEpoch && pageAtStart === currentPageUrl) {
-                        lastFullUrl = fullUrl;
-                        sigFull = currentSig();
-                        capturedM3u8Url = fullUrl;
-                        sigCaptured = currentSig();
-                        switchPlayerSource(fullUrl);
-                        parsingPending = false;
-                        updateStrictUi();
+                var tsSample = (capturedTsUrls && capturedTsUrls.length > 0) ? [capturedTsUrls[0]] : [];
+                var fullUrl = await resolveFullFromServer({
+                    pageUrl: location.href,
+                    previewM3u8Url: capturedM3u8Url,
+                    tsSamples: tsSample
+                });
+                if (fullUrl && fullUrl !== initialUrl) {
+                    var urlTextarea = document.getElementById('hj-download-url');
+                    if (urlTextarea) {
+                        urlTextarea.value = fullUrl;
+                        urlTextarea.classList.add('hj-url-updated');
+                        showGlobalToast('✨ 已更新为完整版视频链接');
                     }
+                    lastFullUrl = fullUrl;
+                    capturedM3u8Url = fullUrl;
+                    sigFull = currentSig();
+                    sigCaptured = currentSig();
+                    updateStrictUi();
                 }
             } catch (_) {}
-        } finally {
-            inFlightPlay = false;
         }
     }
 
-    async function localGuessFullM3U8(previewUrl, ts0) {
-        try {
-            var out = [];
-            if (previewUrl) {
-                out.push(previewUrl.replace(/_preview/ig, '').replace(/\?[^#]*$/, ''));
+    function showDownloadModal(displayUrl, isLoading) {
+        if (isLoading === undefined) isLoading = false;
+        var existingModal = document.querySelector('.hj-modal-overlay[data-type="download"]');
+        if (existingModal) return;
+
+        var modal = document.createElement('div');
+        modal.className = 'hj-modal-overlay';
+        modal.setAttribute('data-type', 'download');
+        modal.style.zIndex = '1000005';
+
+        var loadingHint = isLoading ? '<div style="font-size:12px;margin-top:6px;color:#ffd966;">⏳ 后台正在获取完整版链接，会自动更新...</div>' : '';
+
+        modal.innerHTML = '<div class="hj-modal" style="max-width:600px;"><div class="hj-modal-title">📥 视频下载</div><div class="hj-modal-content"><div style="margin-bottom:12px;color:rgba(255,255,255,0.9);font-size:13px;">💡 M3U8 是播放列表文件，需要使用专业工具下载完整视频</div><div style="margin-bottom:8px;color:rgba(255,255,255,0.8);font-size:12px;font-weight:500;">视频链接：</div><textarea id="hj-download-url" readonly style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:12px;font-family:"Courier New",monospace;resize:vertical;word-break:break-all;outline:none;">' + escapeHtml(String(displayUrl || '')) + '</textarea>' + loadingHint + '</div><div class="hj-modal-actions" style="flex-direction:column;gap:10px;"><button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-copy" style="width:100%;">📋 复制链接</button><button class="hj-modal-btn hj-modal-btn-primary" id="hj-download-go" style="width:100%;background:linear-gradient(135deg,#43e97b 0%,#38f9d7 100%);">🚀 复制并前往下载</button><button class="hj-modal-btn" id="hj-download-close" style="width:100%;background:rgba(255,255,255,0.2);">关闭</button></div></div>';
+
+        document.body.appendChild(modal);
+
+        var closeModal = function() {
+            if (modal && modal.remove) {
+                modal.remove();
             }
-            if (ts0) {
-                try {
-                    var u = new URL(ts0);
-                    var base = u.href.substring(0, u.href.lastIndexOf('/') + 1);
-                    var m = /([^\/]+)_i\d+\.ts$/i.exec(u.pathname || '');
-                    if (m && m[1]) out.push(base + m[1] + '_i.m3u8');
-                    ['index.m3u8', 'master.m3u8', 'playlist.m3u8', 'main.m3u8', 'video.m3u8', 'prog_index.m3u8'].forEach(function(n) { out.push(base + n); });
-                } catch (_) {}
-            }
-            var cand = Array.from(new Set(out)).filter(Boolean);
-            for (var i = 0; i < cand.length; i++) {
-                var url = cand[i];
-                try {
-                    var r = await fetch(url, { method: 'GET', headers: { 'Referer': document.referrer || location.href } });
-                    if (r.ok) {
-                        var t = await r.text();
-                        if (t && t.includes('#EXTM3U')) return url;
-                    }
-                } catch (_) {}
-            }
-        } catch (_) {}
-        return null;
+            downloadOpen = false;
+            setPanelModalMode(false);
+            ensurePanelVisible();
+        };
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
+        });
+
+        var copyBtn = document.getElementById('hj-download-copy');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                var val = document.getElementById('hj-download-url')?.value || '';
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(val);
+                } else {
+                    var textarea = document.createElement('textarea');
+                    textarea.value = val;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+                showGlobalToast('✅ 链接已复制');
+            });
+        }
+
+        var goBtn = document.getElementById('hj-download-go');
+        if (goBtn) {
+            goBtn.addEventListener('click', function() {
+                var val = document.getElementById('hj-download-url')?.value || '';
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(val).catch(function() {});
+                } else {
+                    var textarea = document.createElement('textarea');
+                    textarea.value = val;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+                window.open('https://getm3u8.com/?source=' + val, '_blank');
+                closeModal();
+            });
+        }
+
+        var closeBtn = document.getElementById('hj-download-close');
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+        setPanelModalMode(true);
     }
 
     var currentPageUrl = window.location.href;
