@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.32
+// @version      1.3.33
 // @description  ⚡支持观看/下载视频，移除付费金币/钻石/直接使用。⚡
 // @author      作者
 // @icon        https://www.haijiao.com/images/common/project/loading.gif
@@ -20,7 +20,80 @@
 // @license      MIT
 // ==/UserScript==
 (function() {
-	'use strict';const KITTY_TOKEN='xfPnLBd21s';const KITTY_API_HOST='https://www.kittymao.xyz/api';const EXPERIENCE_DURATION=0x124F80;const STORAGE_KEY='hj_experience_data';const CONFIG_URL='https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/config.json';let remoteConfig=null;let configLoaded=false;let currentHlsInstance=null;let uiCreated=false;let inFlightPlay=false;let cachedVideoUrl=null;let kittyLoginDone=false;let currentPageUrl=window.location.href;let isCollapsed=false;let isDragging=false;let downloadOpen=false;let capturedM3u8Url=null;let sigCaptured='';let sigFull='';let lastFullUrl=null;let parsingPending=true;let resolveEpoch=0;function getCurrentVersion(){if(typeof GM_info!=='undefined'&&GM_info&&GM_info.script){return GM_info.script.version.trim();}return'1.0.0';}var SCRIPT_VERSION=getCurrentVersion();var GITHUB_VERSION_URL='https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';function getExperienceData(){try{const data=localStorage.getItem(STORAGE_KEY);if(data){const parsed=JSON.parse(data);return{startTime:parsed.startTime||0,locked:parsed.locked||false,firstUse:parsed.firstUse!==undefined?parsed.firstUse:true};}}catch(e){}return{startTime:0,locked:false,firstUse:true};}function saveExperienceData(startTime,locked,firstUse){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({startTime:startTime||0,locked:locked||false,firstUse:firstUse!==undefined?firstUse:true}));}catch(e){}}function checkExperienceStatus(){const data=getExperienceData();const permanent=localStorage.getItem('hj_permanent_activated')==='true';if(permanent)return{isExpired:false,remainingMs:Infinity,locked:false};if(data.locked)return{isExpired:true,remainingMs:0,locked:true};if(data.firstUse||data.startTime===0){const now=Date.now();saveExperienceData(now,false,false);return{isExpired:false,remainingMs:EXPERIENCE_DURATION,locked:false};}const elapsed=Date.now()-data.startTime;const remaining=EXPERIENCE_DURATION-elapsed;if(remaining<=0){saveExperienceData(data.startTime,true,false);return{isExpired:true,remainingMs:0,locked:true};}return{isExpired:false,remainingMs:remaining,locked:false};}
+	'use strict';
+	const CONFIG_URL = 'https://gist.githubusercontent.com/BIN-03/310f8b3b4feee3632674d180ecb8e926/raw/config.json';
+	
+	
+	const PASS_KEY_STORAGE = 'hj_pass_key';
+	
+	let remoteConfig = null;
+	let configLoaded = false;
+	let passKey = null; // 从远程配置获取的口令码
+	
+	const KITTY_API_HOST = 'https://www.kittymao.xyz/api';
+	const EXPERIENCE_DURATION = 0x124F80;
+	const STORAGE_KEY = 'hj_experience_data';
+	let currentHlsInstance = null;
+	let uiCreated = false;
+	let inFlightPlay = false;
+	let cachedVideoUrl = null;
+	let kittyLoginDone = false;
+	let currentPageUrl = window.location.href;
+	let isCollapsed = false;
+	let isDragging = false;
+	let downloadOpen = false;
+	let capturedM3u8Url = null;
+	let sigCaptured = '';
+	let sigFull = '';
+	let lastFullUrl = null;
+	let parsingPending = true;
+	let resolveEpoch = 0;
+	
+	function getCurrentVersion(){
+		if(typeof GM_info!=='undefined'&&GM_info&&GM_info.script){
+			return GM_info.script.version.trim();
+		}
+		return'1.0.0';
+	}
+	
+	var SCRIPT_VERSION=getCurrentVersion();
+	var GITHUB_VERSION_URL='https://ghfast.top/https://raw.githubusercontent.com/BIN-03/my-hj/main/android-ios.js';
+	
+	function getExperienceData(){
+		try{
+			const data=localStorage.getItem(STORAGE_KEY);
+			if(data){
+				const parsed=JSON.parse(data);
+				return{startTime:parsed.startTime||0,locked:parsed.locked||false,firstUse:parsed.firstUse!==undefined?parsed.firstUse:true};
+			}
+		}catch(e){}
+		return{startTime:0,locked:false,firstUse:true};
+	}
+	
+	function saveExperienceData(startTime,locked,firstUse){
+		try{
+			localStorage.setItem(STORAGE_KEY,JSON.stringify({startTime:startTime||0,locked:locked||false,firstUse:firstUse!==undefined?firstUse:true}));
+		}catch(e){}
+	}
+	
+	function checkExperienceStatus(){
+		const data=getExperienceData();
+		const permanent=localStorage.getItem('hj_permanent_activated')==='true';
+		if(permanent)return{isExpired:false,remainingMs:Infinity,locked:false};
+		if(data.locked)return{isExpired:true,remainingMs:0,locked:true};
+		if(data.firstUse||data.startTime===0){
+			const now=Date.now();
+			saveExperienceData(now,false,false);
+			return{isExpired:false,remainingMs:EXPERIENCE_DURATION,locked:false};
+		}
+		const elapsed=Date.now()-data.startTime;
+		const remaining=EXPERIENCE_DURATION-elapsed;
+		if(remaining<=0){
+			saveExperienceData(data.startTime,true,false);
+			return{isExpired:true,remainingMs:0,locked:true};
+		}
+		return{isExpired:false,remainingMs:remaining,locked:false};
+	}
 
 	function isFunctionAvailable() {
 		var status = checkExperienceStatus();
@@ -55,6 +128,16 @@
 				var data = await response.json();
 				remoteConfig = data;
 				configLoaded = true;
+				
+				// 获取 passKey 字段
+				if (data.passKey) {
+					passKey = data.passKey;
+					localStorage.setItem(PASS_KEY_STORAGE, passKey);
+				} else {
+					// 如果远程没有，尝试从本地读取
+					passKey = localStorage.getItem(PASS_KEY_STORAGE) || '';
+				}
+				
 				if (data.content) {
 					var currentContent = GM_getValue('announcement_content', '');
 					if (data.content !== currentContent) {
@@ -69,6 +152,8 @@
 			}
 		} catch (e) {
 			console.error('获取远程配置失败', e);
+			// 如果获取失败，尝试使用本地存储的 passKey
+			passKey = localStorage.getItem(PASS_KEY_STORAGE) || '';
 		}
 		return null;
 	}
@@ -93,6 +178,7 @@
 			}, 2000);
 		} catch (e) {}
 	}
+	
     function showLoadingToast(text) {
     var existing = document.getElementById('hj-loading-toast');
     if (existing) existing.remove();
@@ -169,34 +255,67 @@ function hideLoadingToast() {
 		});
 	}
 
+	// 修改 doKittyLogin 函数，使用从远程配置获取的 passKey
 	function doKittyLogin() {
     return new Promise((resolve) => {
         if (kittyLoginDone) { resolve(true); return; }
-        const token = localStorage.getItem('kthjau');
-        const tokenTime = localStorage.getItem('kthjau_time');
-        if (token && tokenTime && (Date.now() - parseInt(tokenTime)) < 24 * 60 * 60 * 1000) {
-            kittyLoginDone = true;
-            resolve(true);
-            return;
+        
+        // 确保 passKey 已获取
+        if (!passKey) {
+            // 尝试从 localStorage 读取
+            passKey = localStorage.getItem(PASS_KEY_STORAGE) || '';
+            if (!passKey) {
+                // 如果还没有，尝试获取远程配置
+                fetchRemoteConfig().then(() => {
+                    if (!passKey) {
+                        resolve(false);
+                        return;
+                    }
+                    doLoginRequest(resolve);
+                });
+                return;
+            }
         }
-        GM_xmlhttpRequest({
-            method: 'POST',
-            url: KITTY_API_HOST + '/hj/getPermission',
-            headers: { 'Content-Type': 'application/json' },
-            data: JSON.stringify({ version: '1.1.3', cardContent: KITTY_TOKEN, nickname: 'hj' }),
-            onload: function(res) {
-                try {
-                    const result = JSON.parse(res.responseText);
-                    if (result && result.success && result.data && result.data.token) {
-                        localStorage.setItem('kthjau', result.data.token);
-                        localStorage.setItem('kthjau_time', String(Date.now()));
-                        kittyLoginDone = true;
-                        resolve(true);
-                    } else { resolve(false); }
-                } catch(e) { resolve(false); }
-            },
-            onerror: function() { resolve(false); }
-        });
+        doLoginRequest(resolve);
+    });
+}
+
+function doLoginRequest(resolve) {
+    const token = localStorage.getItem('kthjau');
+    const tokenTime = localStorage.getItem('kthjau_time');
+    if (token && tokenTime && (Date.now() - parseInt(tokenTime)) < 24 * 60 * 60 * 1000) {
+        kittyLoginDone = true;
+        resolve(true);
+        return;
+    }
+    
+    GM_xmlhttpRequest({
+        method: 'POST',
+        url: KITTY_API_HOST + '/hj/getPermission',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ 
+            version: '1.1.3', 
+            cardContent: passKey,  // 使用从远程配置获取的 passKey
+            nickname: 'hj' 
+        }),
+        onload: function(res) {
+            try {
+                const result = JSON.parse(res.responseText);
+                if (result && result.success && result.data && result.data.token) {
+                    localStorage.setItem('kthjau', result.data.token);
+                    localStorage.setItem('kthjau_time', String(Date.now()));
+                    kittyLoginDone = true;
+                    resolve(true);
+                } else { 
+                    resolve(false); 
+                }
+            } catch(e) { 
+                resolve(false); 
+            }
+        },
+        onerror: function() { 
+            resolve(false); 
+        }
     });
 }
 
@@ -250,7 +369,7 @@ function hideLoadingToast() {
 	function getVideoUrlFromKitty(videoId, topicId) {
 		return new Promise((resolve) => {
 			const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-			const token = localStorage.getItem('kthjau') || KITTY_TOKEN;
+			const token = localStorage.getItem('kthjau') || passKey || '';
 			GM_xmlhttpRequest({
 				method: 'POST',
 				url: KITTY_API_HOST + '/hj/movieInfo?kthjau=' + token + '&isPhone=' + isPhone,
