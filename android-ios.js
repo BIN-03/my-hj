@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         海角—解锁金币/钻石
-// @version      1.3.1
+// @version      1.3.2
 // @description   免费播放 钻石/金币 内容。支持视频下载
 // @author       作者BIN
 // @icon         https://www.haijiao.com/images/common/project/loading.gif
